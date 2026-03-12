@@ -307,6 +307,50 @@ export default function DriverEarningsPage() {
   const weekTotalEarnings = weekDays.reduce((s, d) => s + d.earnings, 0);
   const weekTotalDeliveries = weekDays.reduce((s, d) => s + d.deliveryCount, 0);
 
+  function handleExport() {
+    if (completedTxns.length === 0) return;
+
+    const headers = [
+      "Transaction ID",
+      "Order ID",
+      "Tracking Code",
+      "Date",
+      "Time",
+      "Type",
+      "Pickup",
+      "Delivery",
+      "Amount (INR)",
+      "Status",
+    ];
+
+    const csvContent = [
+      headers.join(","),
+      ...completedTxns.map((txn) => {
+        return [
+          txn.id,
+          txn.orderId,
+          txn.trackingCode,
+          format(txn.dateObj, "yyyy-MM-dd"),
+          format(txn.dateObj, "HH:mm"),
+          typeConfig[txn.type].label,
+          `"${txn.pickup}"`,
+          `"${txn.delivery}"`,
+          txn.amount,
+          txn.status,
+        ].join(",");
+      })
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `earnings_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   /* ─── Detail panel for selected day (shared by both views) ─── */
   function renderDayDetail() {
     if (!selectedDay || !selectedDayInfo) return null;
@@ -449,7 +493,11 @@ export default function DriverEarningsPage() {
                 Week
               </button>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-full text-sm text-secondary-foreground hover:bg-secondary transition-colors">
+            <button
+              onClick={handleExport}
+              disabled={completedTxns.length === 0}
+              className="flex items-center gap-2 px-4 py-2 border border-border rounded-full text-sm text-secondary-foreground hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Download className="h-4 w-4" /> Export
             </button>
           </div>

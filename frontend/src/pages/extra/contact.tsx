@@ -160,7 +160,6 @@ export default function ContactPage() {
                   className="w-full flex items-center justify-center gap-2 rounded-full bg-foreground px-6 py-4 text-sm font-medium text-background hover:bg-foreground/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   Send Message
-                  <Send className="h-4 w-4" />
                 </button>
               </form>
             )}

@@ -16,7 +16,11 @@ const { success } = require('../utils/response');
 const { NotFoundError } = require('../utils/errors');
 const { ORDER_STATUS } = require('../utils/constants');
 
-const getCreatedAt = (record) => record?.createdAt ?? record?.created_at ?? null;
+// With `underscored: true` in Sequelize config, timestamps are always snake_case.
+const getCreatedAt = (record) => record?.created_at ?? null;
+
+const { sequelize } = require('../models');
+const { QueryTypes } = require('sequelize');
 
 const pingLocation = async (req, res, next) => {
   try {
@@ -201,34 +205,45 @@ const getDriverLocations = async (req, res, next) => {
   try {
     const companyId = req.headers['x-company-id'];
 
-    // Get all drivers for this company
-    const drivers = await Driver.findAll({
-      where: companyId ? { company_id: parseInt(companyId, 10) } : {},
-      attributes: ['id', 'name', 'status'],
-    });
-
-    const locations = [];
-    for (const driver of drivers) {
-      const latest = await DriverLocationLog.findOne({
-        where: { driver_id: driver.id },
-        order: [['recorded_at', 'DESC']],
-        attributes: ['lat', 'lng', 'speed', 'heading', 'recorded_at'],
+    if (!companyId) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'x-company-id header is required',
+          status: 400,
+        },
       });
-      if (latest) {
-        locations.push({
-          driverId: driver.id,
-          name: driver.name ?? `Driver #${driver.id}`,
-          status: driver.status,
-          lat: parseFloat(latest.lat),
-          lng: parseFloat(latest.lng),
-          speed: latest.speed ? parseFloat(latest.speed) : null,
-          heading: latest.heading ? parseFloat(latest.heading) : null,
-          recordedAt: latest.recorded_at,
-        });
-      }
     }
 
-    return success(res, locations);
+    // Single query: join drivers with their latest location log (avoids N+1)
+    const parsedCompanyId = parseInt(companyId, 10);
+    const locations = await sequelize.query(
+      `SELECT d.id AS driverId, d.name, d.status,
+              l.lat, l.lng, l.speed, l.heading, l.recorded_at AS recordedAt
+       FROM drivers d
+       INNER JOIN driver_location_logs l ON l.id = (
+         SELECT id FROM driver_location_logs
+         WHERE driver_id = d.id
+         ORDER BY recorded_at DESC
+         LIMIT 1
+       )
+       WHERE d.company_id = :companyId`,
+      { replacements: { companyId: parsedCompanyId }, type: QueryTypes.SELECT },
+    );
+
+    const formatted = locations.map((row) => ({
+      driverId: row.driverId,
+      name: row.name ?? `Driver #${row.driverId}`,
+      status: row.status,
+      lat: parseFloat(row.lat),
+      lng: parseFloat(row.lng),
+      speed: row.speed ? parseFloat(row.speed) : null,
+      heading: row.heading ? parseFloat(row.heading) : null,
+      recordedAt: row.recordedAt,
+    }));
+
+    return success(res, formatted);
   } catch (error) {
     next(error);
   }

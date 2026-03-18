@@ -10,7 +10,7 @@
  *   driver-recipient      — driver ↔ recipient
  */
 
-const { Op } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
 const { Message, Order, Assignment, Driver, Company } = require('../models');
 const { success } = require('../utils/response');
 const { NotFoundError, ForbiddenError, ValidationError } = require('../utils/errors');
@@ -35,12 +35,12 @@ function otherRole(channel, myRole) {
 }
 
 /**
- * Build participant info for an order.
+ * Build participant info from pre-loaded order data.
+ * Expects order to have company and assignment eager-loaded.
  */
-async function getOrderParticipants(order) {
+function getOrderParticipants(order, company, assignment) {
   const participants = {};
 
-  const company = await Company.findByPk(order.company_id);
   if (company) {
     participants.dispatcher = {
       type: 'dispatcher',
@@ -49,11 +49,6 @@ async function getOrderParticipants(order) {
     };
   }
 
-  // Assigned driver
-  const assignment = await Assignment.findOne({
-    where: { order_id: order.id },
-    include: [{ model: Driver, as: 'driver', attributes: ['id', 'name', 'email', 'phone'] }],
-  });
   if (assignment && assignment.driver) {
     participants.driver = {
       type: 'driver',
@@ -62,7 +57,6 @@ async function getOrderParticipants(order) {
     };
   }
 
-  // Recipient
   if (order.recipient_name || order.recipient_phone || order.recipient_email) {
     participants.recipient = {
       type: 'recipient',
@@ -89,12 +83,22 @@ const getConversations = async (req, res, next) => {
     const { role } = req.query;
 
     let orders;
+    const eagerIncludes = [
+      { model: Company, as: 'company', attributes: ['id', 'name', 'email'] },
+      {
+        model: Assignment,
+        as: 'assignment',
+        required: false,
+        include: [{ model: Driver, as: 'driver', attributes: ['id', 'name', 'email', 'phone'] }],
+      },
+    ];
 
     if (role === 'dispatcher') {
       const companyId = req.headers['x-company-id'];
       if (!companyId) throw new ValidationError('x-company-id header required');
       orders = await Order.findAll({
         where: { company_id: companyId },
+        include: eagerIncludes,
         order: [['updated_at', 'DESC']],
       });
     } else if (role === 'driver') {
@@ -102,24 +106,73 @@ const getConversations = async (req, res, next) => {
       if (!driverId) throw new ValidationError('x-driver-id header required');
       const assignments = await Assignment.findAll({
         where: { driver_id: driverId },
-        include: [{ model: Order, as: 'order' }],
+        include: [
+          {
+            model: Order,
+            as: 'order',
+            include: eagerIncludes,
+          },
+        ],
         order: [['created_at', 'DESC']],
       });
       orders = assignments.map((a) => a.order).filter(Boolean);
     } else if (role === 'recipient') {
       const { tracking_code } = req.query;
       if (!tracking_code) throw new ValidationError('tracking_code required for recipient');
-      const order = await Order.findOne({ where: { tracking_code } });
+      const order = await Order.findOne({
+        where: { tracking_code },
+        include: eagerIncludes,
+      });
       orders = order ? [order] : [];
     } else {
       throw new ValidationError('role must be dispatcher, driver, or recipient');
     }
 
-    // For each order, build the channels this role can see
+    // Batch-fetch message stats for all order IDs
+    const orderIds = orders.map((o) => o.id);
+    if (orderIds.length === 0) return success(res, []);
+
+    // Get message counts + last message per order+channel in bulk
+    const messageCounts = await Message.findAll({
+      where: { order_id: { [Op.in]: orderIds } },
+      attributes: ['order_id', 'channel', [fn('COUNT', col('id')), 'total']],
+      group: ['order_id', 'channel'],
+      raw: true,
+    });
+
+    const unreadCounts = await Message.findAll({
+      where: {
+        order_id: { [Op.in]: orderIds },
+        sender_type: { [Op.ne]: role },
+        is_read: false,
+      },
+      attributes: ['order_id', 'channel', [fn('COUNT', col('id')), 'unread']],
+      group: ['order_id', 'channel'],
+      raw: true,
+    });
+
+    // Build lookup maps
+    const countKey = (oid, ch) => `${oid}:${ch}`;
+    const totalMap = new Map(messageCounts.map((r) => [countKey(r.order_id, r.channel), parseInt(r.total, 10)]));
+    const unreadMap = new Map(unreadCounts.map((r) => [countKey(r.order_id, r.channel), parseInt(r.unread, 10)]));
+
+    // Get last message per order+channel
+    const allMessages = await Message.findAll({
+      where: { order_id: { [Op.in]: orderIds } },
+      order: [['created_at', 'DESC']],
+    });
+    const lastMessageMap = new Map();
+    for (const m of allMessages) {
+      const key = countKey(m.order_id, m.channel);
+      if (!lastMessageMap.has(key)) lastMessageMap.set(key, m);
+    }
+
     const conversations = [];
 
     for (const order of orders) {
-      const participants = await getOrderParticipants(order);
+      const company = order.company;
+      const assignment = order.assignment;
+      const participants = getOrderParticipants(order, company, assignment);
 
       // Determine which channels this role participates in
       const myChannels = [];
@@ -136,28 +189,14 @@ const getConversations = async (req, res, next) => {
       }
 
       for (const channel of myChannels) {
-        const other = otherRole(channel, role);
-        const otherParticipant = participants[other];
-
-        // Only show conversations that have at least one message
-        const messageCount = await Message.count({
-          where: { order_id: order.id, channel },
-        });
+        const key = countKey(order.id, channel);
+        const messageCount = totalMap.get(key) || 0;
         if (messageCount === 0) continue;
 
-        const lastMessage = await Message.findOne({
-          where: { order_id: order.id, channel },
-          order: [['created_at', 'DESC']],
-        });
-
-        const unreadCount = await Message.count({
-          where: {
-            order_id: order.id,
-            channel,
-            sender_type: { [Op.ne]: role },
-            is_read: false,
-          },
-        });
+        const other = otherRole(channel, role);
+        const otherParticipant = participants[other];
+        const lastMessage = lastMessageMap.get(key);
+        const unreadCount = unreadMap.get(key) || 0;
 
         conversations.push({
           orderId: order.id,

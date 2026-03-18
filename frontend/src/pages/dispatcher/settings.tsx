@@ -43,7 +43,7 @@ const accentClass =
   "bg-primary text-primary-foreground shadow-[0_24px_60px_-32px_rgba(251,146,60,0.95)]";
 
 export default function SettingsPage() {
-  const { isDark, setIsDark } = useTheme();
+  const { isDark, setMode, setIsDark } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,7 +70,7 @@ export default function SettingsPage() {
       try {
         const data = await fetchCompanySettings(companyId);
         setSettings(data);
-        setIsDark(data.appearancePreferences.theme === "dark");
+        setMode((data.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load settings.");
       } finally {
@@ -107,7 +107,7 @@ export default function SettingsPage() {
       const updated = await saveCompanySettings(settings);
       setSettings(updated);
       syncCompanyStorage(updated);
-      setIsDark(updated.appearancePreferences.theme === "dark");
+      setMode((updated.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       setSuccess("Settings saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save settings.");
@@ -503,10 +503,11 @@ export default function SettingsPage() {
             title="Workspace Theme"
             description="This preference is stored on the account and mirrored to local storage for immediate theme application."
           >
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               {[
-                { label: "Dark", value: "dark" as const },
-                { label: "Light", value: "light" as const },
+                { label: "Dark", value: "dark" as const, description: "High-contrast dashboard styling for dense operations work." },
+                { label: "Light", value: "light" as const, description: "Brighter canvas for daytime dispatch and review tasks." },
+                { label: "System", value: "system" as const, description: "Follows your operating system's light or dark mode setting." },
               ].map((option) => {
                 const active = settings.appearancePreferences.theme === option.value;
                 return (
@@ -523,7 +524,7 @@ export default function SettingsPage() {
                             }
                           : prev,
                       );
-                      setIsDark(option.value === "dark");
+                      setMode(option.value);
                     }}
                     className={`rounded-3xl border p-6 text-left transition-all ${
                       active
@@ -535,9 +536,7 @@ export default function SettingsPage() {
                       {option.label}
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {option.value === "dark"
-                        ? "High-contrast dashboard styling for dense operations work."
-                        : "Brighter canvas for daytime dispatch and review tasks."}
+                      {option.description}
                     </p>
                   </button>
                 );

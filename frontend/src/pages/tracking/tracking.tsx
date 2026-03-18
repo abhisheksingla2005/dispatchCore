@@ -917,7 +917,7 @@ export default function CustomerTrackingPage() {
                 {data.driver.phone && (
                   <a
                     href={`tel:${data.driver.phone}`}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted hover:bg-secondary transition-colors text-sm text-secondary-foreground"
+                    className="flex items-center gap-2 px-3 py-2 rounded-3xl bg-muted hover:bg-secondary transition-colors text-sm text-secondary-foreground"
                   >
                     <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                     {data.driver.phone}

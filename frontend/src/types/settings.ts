@@ -1,5 +1,5 @@
 export interface ThemePreferences {
-  theme: "light" | "dark";
+  theme: "light" | "dark" | "system";
 }
 
 export interface CompanyNotificationPreferences {

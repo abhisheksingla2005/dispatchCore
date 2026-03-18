@@ -49,7 +49,7 @@ const createEmptyVehicle = (): VehicleSettings => ({
 });
 
 export default function DriverSettingsPage() {
-  const { isDark, setIsDark } = useTheme();
+  const { isDark, setMode, setIsDark } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,7 +77,7 @@ export default function DriverSettingsPage() {
       try {
         const data = await fetchDriverSettings(driverId);
         setSettings(data);
-        setIsDark(data.appearancePreferences.theme === "dark");
+        setMode((data.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load settings.");
       } finally {
@@ -86,7 +86,7 @@ export default function DriverSettingsPage() {
     }
 
     load();
-  }, [driverId, setIsDark]);
+  }, [driverId, setMode]);
 
   const initials = useMemo(() => {
     const name = settings?.name || "Driver";
@@ -112,7 +112,7 @@ export default function DriverSettingsPage() {
       const updated = await saveDriverSettings(settings);
       setSettings(updated);
       syncStorage(updated);
-      setIsDark(updated.appearancePreferences.theme === "dark");
+      setMode((updated.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       setSuccess("Profile saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save profile.");
@@ -577,10 +577,11 @@ export default function DriverSettingsPage() {
             title="Theme Preference"
             description="Stored on the driver profile and reflected immediately in the current browser."
           >
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               {[
-                { label: "Dark", value: "dark" as const },
-                { label: "Light", value: "light" as const },
+                { label: "Dark", value: "dark" as const, description: "Keeps navigation dense and high-contrast for route-heavy work." },
+                { label: "Light", value: "light" as const, description: "Uses a lighter canvas for daytime review and bidding." },
+                { label: "System", value: "system" as const, description: "Follows your operating system's light or dark mode setting." },
               ].map((option) => {
                 const active = settings.appearancePreferences.theme === option.value;
                 return (
@@ -595,7 +596,7 @@ export default function DriverSettingsPage() {
                             }
                           : prev,
                       );
-                      setIsDark(option.value === "dark");
+                      setMode(option.value);
                     }}
                     className={`rounded-3xl border p-6 text-left transition-all ${
                       active
@@ -607,9 +608,7 @@ export default function DriverSettingsPage() {
                       {option.label}
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {option.value === "dark"
-                        ? "Keeps navigation dense and high-contrast for route-heavy work."
-                        : "Uses a lighter canvas for daytime review and bidding."}
+                      {option.description}
                     </p>
                   </button>
                 );

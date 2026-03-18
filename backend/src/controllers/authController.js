@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { Company, Driver } = require('../models');
 const { success } = require('../utils/response');
 const { UnauthorizedError } = require('../utils/errors');
@@ -12,7 +13,15 @@ const login = async (req, res, next) => {
     const password = String(req.body.password || '');
 
     if (email === SUPERADMIN_EMAIL) {
-      const isValid = SUPERADMIN_PASSWORD ? password === SUPERADMIN_PASSWORD : password.length > 0;
+      if (!SUPERADMIN_PASSWORD) {
+        throw new UnauthorizedError('Superadmin login is not configured');
+      }
+
+      const passwordBuf = Buffer.from(password);
+      const expectedBuf = Buffer.from(SUPERADMIN_PASSWORD);
+      const isValid =
+        passwordBuf.length === expectedBuf.length &&
+        crypto.timingSafeEqual(passwordBuf, expectedBuf);
       if (!isValid) {
         throw new UnauthorizedError('Incorrect email or password');
       }

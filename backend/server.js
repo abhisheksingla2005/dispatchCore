@@ -40,9 +40,10 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('Database connected');
 
-    // 2. Sync models → create tables if they don't exist
-    await sequelize.sync({ alter: env.nodeEnv === 'development' });
-    logger.info('Database tables synced');
+    // Schema changes should be applied via migrations:
+    //   npx sequelize-cli db:migrate
+    // Do NOT use sync({ alter }) — it can drop columns and cause data loss.
+    logger.info('Database authenticated — run migrations to apply schema changes');
 
     // 2. Create HTTP server
     const server = http.createServer(app);
@@ -82,15 +83,13 @@ const startServer = async () => {
 
     // 5. Start listening (Express / REST / Sockets)
     server.listen(env.port, () => {
-      logger.info(`dispatchCore backend running on port ${env.port}`);
-      logger.info(`   Environment: ${env.nodeEnv}`);
-      logger.info(`   Health:      http://localhost:${env.port}/api/health`);
+      logger.info('Server started', { port: env.port, environment: env.nodeEnv, health: `http://localhost:${env.port}/api/health` });
     });
 
     // ── Graceful Shutdown ──
 
     const shutdown = async (signal) => {
-      logger.info(`\n${signal} received — shutting down gracefully...`);
+      logger.info('Shutdown signal received', { signal });
 
       // Stop accepting new connections
       server.close(async () => {

@@ -9,7 +9,7 @@ const { Op } = require('sequelize');
 const { v4: uuidv4 } = require('uuid');
 const { Order, Bid, Assignment, DeliveryEvent, Driver, Vehicle } = require('../models');
 const { success } = require('../utils/response');
-const { NotFoundError } = require('../utils/errors');
+const { NotFoundError, ConflictError } = require('../utils/errors');
 const { ORDER_STATUS } = require('../utils/constants');
 const { attachLegacyUserShape } = require('../utils/driverSerializer');
 
@@ -254,10 +254,7 @@ const updateOrderStatus = async (req, res, next) => {
 
     const allowed = validTransitions[order.status] ?? [];
     if (!allowed.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        error: { message: `Cannot transition from "${order.status}" to "${status}"` },
-      });
+      throw new ConflictError(`Cannot transition from "${order.status}" to "${status}"`);
     }
 
     await order.update({ status });
@@ -274,7 +271,6 @@ const updateOrderStatus = async (req, res, next) => {
 
     // If delivered, free the driver
     if (status === 'DELIVERED') {
-      const { Driver } = require('../models');
       if (assignment) {
         await Driver.update({ status: 'AVAILABLE' }, { where: { id: assignment.driver_id } });
       }

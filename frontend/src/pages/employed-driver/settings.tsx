@@ -51,7 +51,7 @@ const createEmptyVehicle = (): VehicleSettings => ({
 });
 
 export default function EmployedDriverSettingsPage() {
-  const { isDark, setIsDark } = useTheme();
+  const { isDark, setMode, setIsDark } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -82,7 +82,7 @@ export default function EmployedDriverSettingsPage() {
         if (data.companyName) {
           localStorage.setItem("dc_company_name", data.companyName);
         }
-        setIsDark(data.appearancePreferences.theme === "dark");
+        setMode((data.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load settings.");
       } finally {
@@ -91,7 +91,7 @@ export default function EmployedDriverSettingsPage() {
     }
 
     load();
-  }, [driverId, setIsDark]);
+  }, [driverId, setMode]);
 
   const initials = useMemo(() => {
     const name = settings?.name || "Driver";
@@ -120,7 +120,7 @@ export default function EmployedDriverSettingsPage() {
       const updated = await saveDriverSettings(settings);
       setSettings(updated);
       syncStorage(updated);
-      setIsDark(updated.appearancePreferences.theme === "dark");
+      setMode((updated.appearancePreferences.theme as "dark" | "light" | "system") || "system");
       setSuccess("Profile saved.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save profile.");
@@ -555,10 +555,11 @@ export default function EmployedDriverSettingsPage() {
             title="Theme Preference"
             description="Saved on the employed-driver account and applied to the current browser."
           >
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               {[
-                { label: "Dark", value: "dark" as const },
-                { label: "Light", value: "light" as const },
+                { label: "Dark", value: "dark" as const, description: "Suited to dense route, order, and shift workflows." },
+                { label: "Light", value: "light" as const, description: "Cleaner daytime contrast when reviewing assignments." },
+                { label: "System", value: "system" as const, description: "Follows your operating system's light or dark mode setting." },
               ].map((option) => {
                 const active = settings.appearancePreferences.theme === option.value;
                 return (
@@ -573,7 +574,7 @@ export default function EmployedDriverSettingsPage() {
                             }
                           : prev,
                       );
-                      setIsDark(option.value === "dark");
+                      setMode(option.value);
                     }}
                     className={`rounded-3xl border p-6 text-left transition-all ${
                       active
@@ -585,9 +586,7 @@ export default function EmployedDriverSettingsPage() {
                       {option.label}
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      {option.value === "dark"
-                        ? "Suited to dense route, order, and shift workflows."
-                        : "Cleaner daytime contrast when reviewing assignments."}
+                      {option.description}
                     </p>
                   </button>
                 );

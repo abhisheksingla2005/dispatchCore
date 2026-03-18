@@ -17,11 +17,14 @@ const validate = (req, res, next) => {
             error: {
                 code: 'VALIDATION_ERROR',
                 message: 'Invalid input',
-                details: errors.array().map((err) => ({
+                details: errors.array().map((err) => {
+                const sensitiveFields = ['password', 'password_hash', 'token', 'secret', 'current_password', 'new_password'];
+                return {
                     field: err.path,
                     message: err.msg,
-                    value: err.value,
-                })),
+                    value: sensitiveFields.includes(err.path) ? '[REDACTED]' : err.value,
+                };
+            }),
                 status: 400,
             },
         });

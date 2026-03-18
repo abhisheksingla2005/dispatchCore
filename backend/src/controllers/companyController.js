@@ -10,19 +10,10 @@ const { Company, Driver } = require('../models');
 const { success } = require('../utils/response');
 const { NotFoundError, ConflictError, UnauthorizedError } = require('../utils/errors');
 const { hashPassword, verifyPassword } = require('../utils/password');
+const { ensureEmailAvailable } = require('../utils/emailUniqueness');
+const { COMPANY_NOTIFICATION_DEFAULTS, APPEARANCE_DEFAULTS } = require('../utils/defaults');
 
-const defaultNotificationPreferences = {
-  bid_notifications: true,
-  delivery_updates: true,
-  driver_messages: true,
-  daily_summary_email: false,
-  driver_applications: true,
-  payment_alerts: false,
-};
 
-const defaultAppearancePreferences = {
-  theme: 'dark',
-};
 
 const serializeCompany = (company) => ({
   id: company.id,
@@ -34,9 +25,9 @@ const serializeCompany = (company) => ({
   phone: company.phone,
   plan_type: company.plan_type,
   notification_preferences:
-    company.notification_preferences ?? defaultNotificationPreferences,
+    company.notification_preferences ?? COMPANY_NOTIFICATION_DEFAULTS,
   appearance_preferences:
-    company.appearance_preferences ?? defaultAppearancePreferences,
+    company.appearance_preferences ?? APPEARANCE_DEFAULTS,
   created_at: company.created_at,
   updated_at: company.updated_at,
 });
@@ -56,14 +47,7 @@ const createCompany = async (req, res, next) => {
       appearance_preferences,
     } = req.body;
 
-    const existingCompany = await Company.findOne({ where: { email } });
-    if (existingCompany) {
-      throw new ConflictError('A company with this email already exists');
-    }
-    const existingDriver = await Driver.findOne({ where: { email } });
-    if (existingDriver) {
-      throw new ConflictError('This email is already used by a driver account');
-    }
+    await ensureEmailAvailable(email, {});
 
     const normalizedLocation = location.trim();
     const company = await Company.create({
@@ -75,8 +59,8 @@ const createCompany = async (req, res, next) => {
       contact_name: contact_name ? contact_name.trim() : null,
       phone: phone ? phone.trim() : null,
       plan_type,
-      notification_preferences: notification_preferences ?? defaultNotificationPreferences,
-      appearance_preferences: appearance_preferences ?? defaultAppearancePreferences,
+      notification_preferences: notification_preferences ?? COMPANY_NOTIFICATION_DEFAULTS,
+      appearance_preferences: appearance_preferences ?? APPEARANCE_DEFAULTS,
     });
 
     return success(res, serializeCompany(company), null, 201);
@@ -151,18 +135,7 @@ const updateCompany = async (req, res, next) => {
     } = req.body;
 
     if (email && email.trim().toLowerCase() !== company.email) {
-      const existingCompany = await Company.findOne({
-        where: { email: email.trim().toLowerCase() },
-      });
-      if (existingCompany && existingCompany.id !== company.id) {
-        throw new ConflictError('A company with this email already exists');
-      }
-      const existingDriver = await Driver.findOne({
-        where: { email: email.trim().toLowerCase() },
-      });
-      if (existingDriver) {
-        throw new ConflictError('This email is already used by a driver account');
-      }
+      await ensureEmailAvailable(email.trim().toLowerCase(), { companyId: company.id });
     }
 
     await company.update({
@@ -175,9 +148,9 @@ const updateCompany = async (req, res, next) => {
       phone: phone ?? company.phone,
       plan_type: plan_type ?? company.plan_type,
       notification_preferences:
-        notification_preferences ?? company.notification_preferences ?? defaultNotificationPreferences,
+        notification_preferences ?? company.notification_preferences ?? COMPANY_NOTIFICATION_DEFAULTS,
       appearance_preferences:
-        appearance_preferences ?? company.appearance_preferences ?? defaultAppearancePreferences,
+        appearance_preferences ?? company.appearance_preferences ?? APPEARANCE_DEFAULTS,
     });
 
     return success(res, serializeCompany(company));

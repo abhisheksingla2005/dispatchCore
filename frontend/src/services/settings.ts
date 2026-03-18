@@ -84,6 +84,12 @@ const defaultAppearance: ThemePreferences = {
   theme: "dark",
 };
 
+function optionalText(value: string | null | undefined): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function normalizeAppearance(
   appearance?: Partial<ThemePreferences> | null,
 ): ThemePreferences {
@@ -163,12 +169,12 @@ export async function fetchCompanySettings(companyId: string | number) {
 
 export async function saveCompanySettings(settings: CompanySettings) {
   const company = await put<BackendCompany>(`/companies/${settings.id}`, {
-    name: settings.name,
-    email: settings.email,
-    phone: settings.phone || null,
-    location: settings.location || null,
-    address: settings.address || null,
-    contact_name: settings.contactName || null,
+    name: settings.name.trim(),
+    email: settings.email.trim(),
+    phone: optionalText(settings.phone),
+    location: optionalText(settings.location),
+    address: optionalText(settings.address),
+    contact_name: optionalText(settings.contactName),
     notification_preferences: settings.notificationPreferences,
     appearance_preferences: settings.appearancePreferences,
   });
@@ -209,10 +215,10 @@ export async function fetchDriverSettings(driverId: string | number) {
 
 export async function saveDriverSettings(settings: DriverSettings) {
   const driver = await put<BackendDriver>(`/drivers/${settings.id}`, {
-    name: settings.name,
-    email: settings.email,
-    phone: settings.phone || null,
-    license_number: settings.licenseNumber || null,
+    name: settings.name.trim(),
+    email: settings.email.trim(),
+    phone: optionalText(settings.phone),
+    license_number: optionalText(settings.licenseNumber),
     notification_preferences: settings.notificationPreferences,
     appearance_preferences: settings.appearancePreferences,
   });
@@ -253,8 +259,8 @@ export async function fetchSuperadminSettings() {
 
 export async function saveSuperadminSettings(settings: SuperadminSettings) {
   const updated = await put<BackendSuperadminSettings>("/superadmin/settings", {
-    name: settings.name,
-    email: settings.email,
+    name: settings.name.trim(),
+    email: settings.email.trim(),
     notification_preferences: settings.notificationPreferences,
     appearance_preferences: settings.appearancePreferences,
   });

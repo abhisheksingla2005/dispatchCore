@@ -139,8 +139,8 @@ const getMarketplaceListings = async (req, res, next) => {
       limit: parseInt(limit, 10),
       offset,
       include: [
-        { model: require('../models').Bid, as: 'bids', attributes: ['id'] },
-        { model: require('../models').Company, as: 'company', attributes: ['id', 'name'] },
+        { model: Bid, as: 'bids', attributes: ['id'] },
+        { model: Company, as: 'company', attributes: ['id', 'name'] },
       ],
     });
 
@@ -249,7 +249,7 @@ const getDriverStats = async (req, res, next) => {
       completedToday,
       completedTotal,
       pendingBids,
-      rating: 4.8, // CE-03: Compute from reviews
+      rating: null, // CE-03: Compute from reviews when implemented
     });
   } catch (error) {
     next(error);

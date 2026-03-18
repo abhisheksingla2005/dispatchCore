@@ -92,7 +92,7 @@ export default function MapView({
       interactive={interactive}
       attributionControl={false}
     >
-      <NavigationControl position="top-right" showCompass={false} />
+      <NavigationControl position="bottom-right" showCompass={false} />
 
       {/* Route polylines */}
       {routes.map((route) => (

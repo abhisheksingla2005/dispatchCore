@@ -16,13 +16,17 @@ const errorHandler = (err, req, res, _next) => {
 
     // Log the error
     if (status >= 500) {
-        logger.error(`${code}: ${err.message}`, {
+        logger.error('Request error', {
+            code,
+            errorMessage: err.message,
             stack: err.stack,
             url: req.originalUrl,
             method: req.method,
         });
     } else {
-        logger.warn(`${code}: ${err.message}`, {
+        logger.warn('Client error', {
+            code,
+            errorMessage: err.message,
             url: req.originalUrl,
             method: req.method,
         });

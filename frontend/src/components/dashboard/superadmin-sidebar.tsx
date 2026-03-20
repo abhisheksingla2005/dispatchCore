@@ -17,10 +17,8 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-interface SidebarProps {
-  isDark: boolean;
-  setIsDark: (v: boolean) => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+interface SidebarProps {}
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/superadmin" },
@@ -30,10 +28,7 @@ const navItems = [
   { icon: Settings, label: "Settings", href: "/superadmin/settings" },
 ];
 
-export function SuperAdminSidebar({
-  isDark: _isDark,
-  setIsDark: _setIsDark,
-}: SidebarProps) {
+export function SuperAdminSidebar(_props: SidebarProps) {
   const [open, setOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();

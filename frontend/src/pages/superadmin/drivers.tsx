@@ -8,7 +8,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SuperAdminSidebar } from "@/components/dashboard/superadmin-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Truck,
   Search,
@@ -55,7 +54,6 @@ const verificationColors: Record<
 };
 
 export default function SuperAdminDriversPage() {
-  const { isDark, setIsDark } = useTheme();
   const [searchParams] = useSearchParams();
   const [drivers, setDrivers] = useState<DriverSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +111,7 @@ export default function SuperAdminDriversPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <SuperAdminSidebar isDark={isDark} setIsDark={setIsDark} />
+      <SuperAdminSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top Bar */}

@@ -8,7 +8,7 @@ import type {
   SuperadminSettings,
   ThemePreferences,
   VehicleSettings,
-} from "@/types/settings";
+} from "@/types/shared/settings";
 
 interface BackendCompany {
   id: number;
@@ -81,7 +81,7 @@ const defaultSuperadminNotifications: SuperadminNotificationPreferences = {
 };
 
 const defaultAppearance: ThemePreferences = {
-  theme: "dark",
+  theme: "system",
 };
 
 function optionalText(value: string | null | undefined): string | undefined {

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   useListedOrders,
   useBids,
@@ -48,7 +47,6 @@ const priorityLabel: Record<string, string> = {
 
 /* ─── Marketplace Page (Dispatcher View) ─── */
 export default function MarketplacePage() {
-  const { isDark, setIsDark } = useTheme();
   const [sortBy, setSortBy] = useState<MarketplaceSortBy>("priority");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [listingModal, setListingModal] = useState<MarketplaceOrder | null>(
@@ -94,7 +92,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto flex flex-col">
         <div className="flex-1 flex flex-col lg:flex-row">

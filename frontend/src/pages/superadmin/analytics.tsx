@@ -7,7 +7,6 @@
 
 import { useState, useEffect } from "react";
 import { SuperAdminSidebar } from "@/components/dashboard/superadmin-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   BarChart3,
   AlertCircle,
@@ -54,7 +53,6 @@ const orderStatusLabels: Record<string, string> = {
 };
 
 export default function SuperAdminAnalyticsPage() {
-  const { isDark, setIsDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<PlatformStats | null>(null);
@@ -111,7 +109,7 @@ export default function SuperAdminAnalyticsPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <SuperAdminSidebar isDark={isDark} setIsDark={setIsDark} />
+      <SuperAdminSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top Bar */}

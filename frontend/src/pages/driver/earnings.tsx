@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   IndianRupee,
   TrendingUp,
@@ -92,7 +91,6 @@ function formatShortDate(d: Date): string {
 }
 
 export default function DriverEarningsPage() {
-  const { isDark, setIsDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<BackendAssignment[]>([]);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -460,7 +458,7 @@ export default function DriverEarningsPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DriverSidebar />
       <div className="flex-1 bg-background overflow-auto">
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
           <div>

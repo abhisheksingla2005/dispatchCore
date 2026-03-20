@@ -1,6 +1,6 @@
-import { usePageMeta } from "@/hooks/usePageMeta";
+import { usePageMeta } from "@/hooks/app/usePageMeta";
 import { useState } from "react";
-import { PageLayout } from "@/components/page-layout";
+import { PageLayout } from "@/components/layout/page-layout";
 import { Send, Mail, Building2, User, MessageSquare } from "lucide-react";
 
 export default function ContactPage() {

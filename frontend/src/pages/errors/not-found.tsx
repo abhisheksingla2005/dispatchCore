@@ -3,7 +3,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Globe } from "@/components/ui/cosmic-globe";
 import { useNavigate } from "react-router-dom";
-import { ErrorDithering } from "@/components/error-dithering";
+import { ErrorDithering } from "@/components/visual/error-dithering";
 
 const fadeCenter: Variants = {
   hidden: { opacity: 0, scale: 0.95 },

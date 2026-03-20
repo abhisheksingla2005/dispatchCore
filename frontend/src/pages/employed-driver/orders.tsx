@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { EmployedDriverSidebar } from "@/components/dashboard/employed-driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Search,
   MapPin,
@@ -52,7 +51,6 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 };
 
 export default function EmployedDriverOrdersPage() {
-  const { isDark, setIsDark } = useTheme();
   const [filter, setFilter] = useState<StatusFilter>("ALL");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -92,7 +90,7 @@ export default function EmployedDriverOrdersPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <EmployedDriverSidebar />
       <div className="flex-1 bg-background overflow-auto">
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
           <h1 className="text-xl font-bold text-foreground">

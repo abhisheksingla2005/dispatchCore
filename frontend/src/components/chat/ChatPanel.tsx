@@ -23,10 +23,12 @@ import {
   sendChatMessage,
   markMessagesRead,
   type Conversation,
+  type ConversationBucket,
   type ChatMsg,
   type ChatChannel,
-} from "@/services/messaging";
-import { useOrderMessages } from "@/hooks/useSocket";
+} from "@/services/shared/messaging";
+import { useOrderMessages } from "@/hooks/realtime/useSocket";
+import { ApiRequestError } from "@/lib/api";
 
 // ── Props ──
 
@@ -94,6 +96,14 @@ function channelLabel(channel: string, role: string): string {
   return channel;
 }
 
+function conversationKey(orderId: number, channel: ChatChannel): string {
+  return `${orderId}:${channel}`;
+}
+
+function isArchivedStatus(status?: string | null): boolean {
+  return status === "DELIVERED" || status === "CANCELLED";
+}
+
 // ── Component ──
 
 export default function ChatPanel({
@@ -106,17 +116,20 @@ export default function ChatPanel({
   initialOrderId,
   initialChannel,
 }: ChatPanelProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeKey, setActiveKey] = useState<string | null>(
+  const initialKey =
     initialOrderId && initialChannel
-      ? `${initialOrderId}:${initialChannel}`
-      : null,
-  );
+      ? conversationKey(initialOrderId, initialChannel)
+      : null;
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeBucket, setActiveBucket] =
+    useState<ConversationBucket>("active");
+  const [activeKey, setActiveKey] = useState<string | null>(initialKey);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [msgLoading, setMsgLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const activeOrderId = activeKey ? Number(activeKey.split(":")[0]) : null;
@@ -126,24 +139,84 @@ export default function ChatPanel({
 
   // ── Load conversations ──
   const loadConversations = useCallback(async () => {
+    setLoading(true);
     try {
-      const convos = await fetchConversations(role, trackingCode);
+      const convos = await fetchConversations(role, trackingCode, activeBucket);
       setConversations(convos);
-      // Auto-select first if none active
-      if (!activeKey && convos.length > 0) {
+      const hasActiveConversation =
+        !!activeKey &&
+        convos.some(
+          (convo) => conversationKey(convo.orderId, convo.channel) === activeKey,
+        );
+
+      if (!hasActiveConversation && convos.length > 0) {
         const first = convos[0];
-        setActiveKey(`${first.orderId}:${first.channel}`);
+        setActiveKey(conversationKey(first.orderId, first.channel));
+      } else if (!hasActiveConversation && convos.length === 0) {
+        setActiveKey(null);
       }
     } catch (err) {
       console.error("Failed to load conversations:", err);
     } finally {
       setLoading(false);
     }
-  }, [role, trackingCode, activeKey]);
+  }, [role, trackingCode, activeBucket, activeKey]);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  useEffect(() => {
+    if (
+      loading ||
+      activeBucket !== "active" ||
+      !initialKey ||
+      activeKey !== initialKey ||
+      conversations.some(
+        (convo) => conversationKey(convo.orderId, convo.channel) === initialKey,
+      )
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadArchivedConversation = async () => {
+      try {
+        const archivedConvos = await fetchConversations(
+          role,
+          trackingCode,
+          "archived",
+        );
+        if (cancelled) return;
+        if (
+          archivedConvos.some(
+            (convo) =>
+              conversationKey(convo.orderId, convo.channel) === initialKey,
+          )
+        ) {
+          setActiveBucket("archived");
+          setConversations(archivedConvos);
+        }
+      } catch (err) {
+        console.error("Failed to load archived conversations:", err);
+      }
+    };
+
+    loadArchivedConversation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    loading,
+    activeBucket,
+    initialKey,
+    activeKey,
+    conversations,
+    role,
+    trackingCode,
+  ]);
 
   // ── Load messages for active conversation ──
   const loadMessages = useCallback(async () => {
@@ -180,6 +253,10 @@ export default function ChatPanel({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    setSendError(null);
+  }, [activeKey, activeBucket]);
 
   // ── Real-time new messages ──
   useOrderMessages(
@@ -235,6 +312,7 @@ export default function ChatPanel({
     if (!newMessage.trim() || !activeOrderId || !activeChannel) return;
     const text = newMessage.trim();
     setNewMessage("");
+    setSendError(null);
 
     try {
       const sent = await sendChatMessage(activeOrderId, activeChannel, {
@@ -250,10 +328,19 @@ export default function ChatPanel({
       });
       // If this was a new conversation, reload the conversation list
       if (isNewConversation) {
-        const convos = await fetchConversations(role, trackingCode);
+        const convos = await fetchConversations(role, trackingCode, activeBucket);
         setConversations(convos);
       }
     } catch (err) {
+      if (
+        err instanceof ApiRequestError &&
+        err.message === "Chat is closed for completed orders"
+      ) {
+        setSendError("This chat is closed because the order is completed.");
+        setActiveBucket("archived");
+      } else {
+        setSendError("Failed to send message. Please try again.");
+      }
       console.error("Failed to send message:", err);
       setNewMessage(text);
     }
@@ -275,6 +362,11 @@ export default function ChatPanel({
   const activeConversation = conversations.find(
     (c) => c.orderId === activeOrderId && c.channel === activeChannel,
   );
+  const isArchivedConversation =
+    !!activeConversation?.status && isArchivedStatus(activeConversation.status);
+  const isReadOnly =
+    isArchivedConversation ||
+    (activeBucket === "archived" && !!activeOrderId && !!activeChannel);
 
   // When navigated via deep-link (initialOrderId+initialChannel) but no messages exist yet
   const isNewConversation =
@@ -306,6 +398,22 @@ export default function ChatPanel({
             <MessageSquare className="h-4 w-4" />
             Messages
           </h2>
+          <div className="flex items-center gap-2 mb-3">
+            {(["active", "archived"] as ConversationBucket[]).map((bucket) => (
+              <button
+                key={bucket}
+                type="button"
+                onClick={() => setActiveBucket(bucket)}
+                className={`flex-1 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+                  activeBucket === bucket
+                    ? "bg-primary text-white"
+                    : "bg-secondary text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {bucket === "active" ? "Active" : "Archived"}
+              </button>
+            ))}
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
@@ -323,10 +431,14 @@ export default function ChatPanel({
             <div className="p-6 text-center">
               <MessageSquare className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
               <p className="text-sm text-muted-foreground">
-                No conversations yet
+                {activeBucket === "active"
+                  ? "No active conversations"
+                  : "No archived conversations"}
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">
-                Messages will appear when orders are created
+                {activeBucket === "active"
+                  ? "Messages appear here while orders are still in progress"
+                  : "Completed order chats move here after delivery or cancellation"}
               </p>
             </div>
           ) : (
@@ -518,32 +630,48 @@ export default function ChatPanel({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="px-5 py-3.5">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" && !e.shiftKey && handleSend()
-                  }
-                  className="flex-1 px-4 py-2.5 text-sm border border-border rounded-full bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!newMessage.trim()}
-                  className={`p-2.5 rounded-full transition-colors ${
-                    newMessage.trim()
-                      ? `${bubbleColor} ${bubbleText} hover:opacity-90`
-                      : "bg-secondary text-muted-foreground cursor-not-allowed"
-                  }`}
-                >
-                  <Send className="h-4 w-4" />
-                </button>
+            {isReadOnly ? (
+              <div className="px-5 py-4 border-t border-border bg-muted/30">
+                <p className="text-sm font-medium text-foreground">
+                  Chat closed after completion
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Archived conversations stay visible here, but new messages are
+                  disabled once the order is delivered or cancelled.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="px-5 py-3.5 border-t border-border">
+                {sendError && (
+                  <div className="mb-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    {sendError}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !e.shiftKey && handleSend()
+                    }
+                    className="flex-1 px-4 py-2.5 text-sm border border-border rounded-full bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!newMessage.trim()}
+                    className={`p-2.5 rounded-full transition-colors ${
+                      newMessage.trim()
+                        ? `${bubbleColor} ${bubbleText} hover:opacity-90`
+                        : "bg-secondary text-muted-foreground cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

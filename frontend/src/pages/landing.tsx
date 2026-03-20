@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { motion, useInView, useScroll, useTransform } from "motion/react";
-import { useAutoTheme } from "@/hooks/useAutoTheme";
+import { useAutoTheme } from "@/hooks/app/useAutoTheme";
 import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
 import { WorldMap } from "@/components/ui/world-map";

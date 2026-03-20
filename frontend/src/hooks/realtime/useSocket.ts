@@ -23,7 +23,7 @@ import {
   type OrderStatusUpdate,
   type BidUpdate,
   type ChatMessage,
-} from "@/services/socket";
+} from "@/services/shared/socket";
 
 /** Join an order tracking room and subscribe to location + status updates */
 export function useOrderTracking(

@@ -7,7 +7,7 @@ import {
   ToggleRow,
   type SettingsTabItem,
 } from "@/components/settings/workspace";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme } from "@/hooks/app/useTheme";
 import {
   Bell,
   Building2,
@@ -28,8 +28,8 @@ import {
   fetchDriverSettings,
   saveDriverSettings,
   saveDriverVehicle,
-} from "@/services/settings";
-import type { DriverSettings, VehicleSettings } from "@/types/settings";
+} from "@/services/shared/settings";
+import type { DriverSettings, VehicleSettings } from "@/types/shared/settings";
 
 const tabs: SettingsTabItem[] = [
   { id: "profile", label: "Profile", icon: User, description: "Personal details" },
@@ -41,7 +41,7 @@ const tabs: SettingsTabItem[] = [
 ];
 
 const accentClass =
-  "bg-blue-600 text-white shadow-[0_24px_60px_-32px_rgba(37,99,235,0.95)]";
+  "bg-primary text-primary-foreground shadow-lg";
 
 const createEmptyVehicle = (): VehicleSettings => ({
   type: "VAN",
@@ -51,7 +51,7 @@ const createEmptyVehicle = (): VehicleSettings => ({
 });
 
 export default function EmployedDriverSettingsPage() {
-  const { isDark, setMode, setIsDark } = useTheme();
+  const { setMode } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -191,7 +191,7 @@ export default function EmployedDriverSettingsPage() {
   if (loading || !settings) {
     return (
       <div className="flex min-h-screen w-full">
-        <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+        <EmployedDriverSidebar />
         <div className="flex flex-1 items-center justify-center">
           <LoadingPackage />
         </div>
@@ -207,7 +207,7 @@ export default function EmployedDriverSettingsPage() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       accentClass={accentClass}
-      sidebar={<EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />}
+      sidebar={<EmployedDriverSidebar />}
     >
       {error && <SettingsNotice tone="error">{error}</SettingsNotice>}
       {success && <SettingsNotice tone="success">{success}</SettingsNotice>}
@@ -218,14 +218,14 @@ export default function EmployedDriverSettingsPage() {
             title="Personal Profile"
             description="Editable fields stored directly on the employed driver account."
             actions={
-              <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 EMPLOYED
               </span>
             }
           >
             <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
               <div className="rounded-3xl border border-border bg-muted/40 p-6">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-400 text-3xl font-bold text-white">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-3xl font-bold text-white">
                   {initials}
                 </div>
                 <p className="mt-4 text-lg font-semibold text-foreground">
@@ -328,7 +328,7 @@ export default function EmployedDriverSettingsPage() {
                         : prev,
                     )
                   }
-                  className="w-full appearance-none rounded-full border border-border bg-muted/30 px-4 pe-12 py-3 text-sm text-foreground outline-none focus:border-blue-500 cursor-pointer"
+                  className="w-full appearance-none rounded-full border border-border bg-muted/30 px-4 pe-12 py-3 text-sm text-foreground outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="BIKE">Bike</option>
                   <option value="VAN">Van</option>
@@ -394,7 +394,7 @@ export default function EmployedDriverSettingsPage() {
                         : prev,
                     )
                   }
-                  className="w-full appearance-none rounded-full border border-border bg-muted/30 px-4 pe-12 py-3 text-sm text-foreground outline-none focus:border-blue-500 cursor-pointer"
+                  className="w-full appearance-none rounded-full border border-border bg-muted/30 px-4 pe-12 py-3 text-sm text-foreground outline-none focus:border-primary cursor-pointer"
                 >
                   <option value="ACTIVE">Active</option>
                   <option value="MAINTENANCE">Maintenance</option>
@@ -437,7 +437,7 @@ export default function EmployedDriverSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-blue-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Bid updates"
@@ -456,7 +456,7 @@ export default function EmployedDriverSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-blue-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Delivery reminders"
@@ -475,7 +475,7 @@ export default function EmployedDriverSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-blue-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Dispatcher messages"
@@ -494,7 +494,7 @@ export default function EmployedDriverSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-blue-600"
+                activeClass="bg-primary"
               />
             </div>
           </SettingsCard>
@@ -535,7 +535,7 @@ export default function EmployedDriverSettingsPage() {
               <button
                 type="submit"
                 disabled={passwordSaving}
-                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 disabled:opacity-60"
               >
                 {passwordSaving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -578,8 +578,8 @@ export default function EmployedDriverSettingsPage() {
                     }}
                     className={`rounded-3xl border p-6 text-left transition-all ${
                       active
-                        ? "border-blue-600 bg-blue-600/10"
-                        : "border-border bg-muted/30 hover:border-blue-500/40"
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-muted/30 hover:border-primary/40"
                     }`}
                   >
                     <p className="text-lg font-semibold text-foreground">
@@ -615,7 +615,7 @@ function Actions({
         type={buttonType}
         onClick={buttonType === "submit" ? undefined : onSave}
         disabled={saving}
-        className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-[0_24px_60px_-32px_rgba(37,99,235,0.95)] transition-colors hover:bg-blue-700 disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary/90 disabled:opacity-60"
       >
         {saving ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -652,7 +652,7 @@ function Field({
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-full border border-border bg-muted/30 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors focus:border-blue-500"
+          className="w-full rounded-full border border-border bg-muted/30 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors focus:border-primary"
         />
       </div>
     </label>
@@ -677,7 +677,7 @@ function PasswordField({
         type="password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-full border border-border bg-muted/30 px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-blue-500"
+        className="w-full rounded-full border border-border bg-muted/30 px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary"
       />
     </label>
   );

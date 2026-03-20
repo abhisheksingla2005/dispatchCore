@@ -12,9 +12,12 @@ const { DriverLocationLog, Driver, Assignment, Order } = require('../models');
 const { DRIVER_TYPE, DRIVER_STATUS, ORDER_STATUS } = require('../utils/constants');
 const logger = require('../config/logger');
 
+const BROADCAST_CONTEXT_TTL_MS = 5000;
+
 class LocationService {
     constructor(io) {
         this.io = io;
+        this.broadcastContextCache = new Map();
     }
 
     /**
@@ -38,7 +41,7 @@ class LocationService {
             recorded_at: new Date(),
         });
 
-        logger.debug('GPS ping recorded', { driverId, lat, lng });
+        logger.debug({ driverId, lat, lng }, 'GPS ping recorded');
 
         // Determine if location should be broadcast
         await this.broadcastLocation(driverId, { lat, lng, speed, heading });
@@ -71,22 +74,12 @@ class LocationService {
             return;
         }
 
-        const driver = await Driver.findByPk(driverId, {
-            include: [
-                {
-                    model: Assignment,
-                    as: 'assignments',
-                    required: false,
-                    include: [{ model: Order, as: 'order' }],
-                },
-            ],
-        });
-
-        if (!driver || driver.status === DRIVER_STATUS.OFFLINE) {
+        const context = await this._getBroadcastContext(driverId);
+        if (!context || context.status === DRIVER_STATUS.OFFLINE) {
             return;
         }
 
-        const targetRooms = await this._getTargetRooms(driver);
+        const targetRooms = this._getTargetRooms(context);
 
         const payload = {
             driverId,
@@ -106,10 +99,10 @@ class LocationService {
      * Determine which WebSocket rooms should receive a driver's location.
      * @private
      *
-     * @param {Driver} driver - Driver with loaded assignments
+     * @param {object} driver - Driver broadcast context
      * @returns {Promise<string[]>} Array of room names
      */
-    async _getTargetRooms(driver) {
+    _getTargetRooms(driver) {
         const rooms = [];
 
         if (driver.type === DRIVER_TYPE.EMPLOYED) {
@@ -158,6 +151,36 @@ class LocationService {
                 orderStatus === ORDER_STATUS.ASSIGNED
             );
         });
+    }
+
+    async _getBroadcastContext(driverId) {
+        const cached = this.broadcastContextCache.get(driverId);
+        if (cached && cached.expiresAt > Date.now()) {
+            return cached.value;
+        }
+
+        const driver = await Driver.findByPk(driverId, {
+            include: [
+                {
+                    model: Assignment,
+                    as: 'assignments',
+                    required: false,
+                    include: [{ model: Order, as: 'order' }],
+                },
+            ],
+        });
+
+        if (!driver) {
+            this.broadcastContextCache.delete(driverId);
+            return null;
+        }
+
+        this.broadcastContextCache.set(driverId, {
+            value: driver,
+            expiresAt: Date.now() + BROADCAST_CONTEXT_TTL_MS,
+        });
+
+        return driver;
     }
 }
 

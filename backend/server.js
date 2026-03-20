@@ -2,123 +2,51 @@
  * Server Entry Point
  *
  * Creates the HTTP server, attaches Socket.io, and mounts Express.
- * initializes all services, and wires everything together.
+ * Initializes runtime services and graceful shutdown handling.
  *
  * Also handles graceful shutdown — closes sockets, drains DB pool,
  * and stops accepting new connections before exiting.
  */
 
 const http = require('http');
-const { Server: SocketIO } = require('socket.io');
-const express = require('express');
 
 const app = require('./src/app');
 const env = require('./src/config/env');
 const logger = require('./src/config/logger');
 const { sequelize } = require('./src/models');
+const {
+  createSocketServer,
+  registerServices,
+  registerShutdownHandlers,
+} = require('./src/bootstrap/runtime');
 
-// WebSocket
-const { initializeSocket } = require('./src/sockets');
-
-// Services
-const AssignmentService = require('./src/services/assignmentService');
-const MarketplaceService = require('./src/services/marketplaceService');
-const LocationService = require('./src/services/locationService');
-const RouteMatchingService = require('./src/services/routeMatchingService');
-const HistoryService = require('./src/services/historyService');
-
-// ── Bootstrap ──
-
-const wsCorsOrigins = env.wsCorsOrigin
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
+/**
+ * Authenticate infrastructure dependencies, compose runtime services,
+ * and begin accepting HTTP/WebSocket traffic.
+ */
 const startServer = async () => {
   try {
-    // 1. Test database connection
     await sequelize.authenticate();
-    logger.info('Database connected');
+    logger.info('Database authenticated');
 
-    // Schema changes should be applied via migrations:
-    //   npx sequelize-cli db:migrate
-    // Do NOT use sync({ alter }) — it can drop columns and cause data loss.
-    logger.info('Database authenticated — run migrations to apply schema changes');
-
-    // 2. Create HTTP server
     const server = http.createServer(app);
-
-    // 3. Initialize Socket.io
-    const io = new SocketIO(server, {
-      cors: {
-        origin: wsCorsOrigins,
-        methods: ['GET', 'POST'],
-      },
-      pingTimeout: 60000,
-      pingInterval: 25000,
-    });
-
-    initializeSocket(io);
+    const io = createSocketServer(server);
     logger.info('WebSocket initialized');
 
-    // Expose io on Express app for controllers (e.g. messageController)
-    app.set('io', io);
+    registerServices(app, io);
 
-    // 4. Initialize services (inject Socket.io)
-    const assignmentService = new AssignmentService(io);
-    const marketplaceService = new MarketplaceService(io);
-    const locationService = new LocationService(io);
-    const routeMatchingService = new RouteMatchingService();
-    const historyService = new HistoryService();
-
-    // Attach to Express app for controller access
-    app.set('assignmentService', assignmentService);
-    app.set('marketplaceService', marketplaceService);
-    app.set('locationService', locationService);
-    app.set('routeMatchingService', routeMatchingService);
-    app.set('historyService', historyService);
-
-    // Expose locationService on io for WebSocket GPS pings
-    io.locationService = locationService;
-
-    // 5. Start listening (Express / REST / Sockets)
-    server.listen(env.port, () => {
-      logger.info('Server started', { port: env.port, environment: env.nodeEnv, health: `http://localhost:${env.port}/api/health` });
+    server.on('error', (error) => {
+      logger.error({ err: error }, 'HTTP server failed');
+      process.exit(1);
     });
 
-    // ── Graceful Shutdown ──
+    server.listen(env.port, () => {
+      logger.info({ port: env.port, nodeEnv: env.nodeEnv }, 'Server started');
+    });
 
-    const shutdown = async (signal) => {
-      logger.info('Shutdown signal received', { signal });
-
-      // Stop accepting new connections
-      server.close(async () => {
-        logger.info('HTTP server closed');
-
-        // Close all WebSocket connections
-        io.close(() => {
-          logger.info('WebSocket connections closed');
-        });
-
-        // Drain database pool
-        await sequelize.close();
-        logger.info('Database pool drained');
-
-        logger.info('Graceful shutdown complete');
-        process.exit(0);
-      });
-
-      // Force exit after 10 seconds
-      setTimeout(() => {
-        logger.error('Forced shutdown after timeout');
-        process.exit(1);
-      }, 10000);
-    };
-
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
+    registerShutdownHandlers({ server, io, sequelize, logger });
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 };

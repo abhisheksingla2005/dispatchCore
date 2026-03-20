@@ -268,7 +268,7 @@ const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'x-driver-id', 'x-user-role'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-company-id', 'x-driver-id'],
 };
 ```
 
@@ -311,7 +311,6 @@ Current authentication is header-based (CE-02 will add JWT):
 |---|---|---|
 | `x-company-id` | Company tenant scope | Frontend (from localStorage) |
 | `x-driver-id` | Driver identity | Frontend (from localStorage) |
-| `x-user-role` | User role | Frontend (from localStorage) |
 
 ---
 
@@ -323,7 +322,7 @@ Current authentication is header-based (CE-02 will add JWT):
 // Wraps fetch() with automatic:
 // - Base URL injection (VITE_API_URL)
 // - JSON content-type headers
-// - Identity headers (x-company-id, x-driver-id, x-user-role)
+// - Identity headers (x-company-id, x-driver-id)
 // - Response unwrapping (extracts data from { success, data, meta } envelope)
 // - Error handling
 ```
@@ -410,8 +409,10 @@ High-frequency GPS pings are sent directly over WebSocket (`location:ping` event
 
 ### Styling
 - **Tailwind CSS v4** — utility-first CSS
-- **CSS Custom Properties** — theme tokens (light/dark mode via `useTheme` hook)
+- **CSS Custom Properties** — theme tokens (light/dark/system via `useTheme` hook; default: `system`)
 - **No inline styles** — all styling through Tailwind classes
+- **Settings pages** — use the shared settings layout and theme system. Current settings screens may still use some role-specific accent colors while the visual language is being standardized.
+- **Dashboard pages** — may use role-specific accent colors for role branding
 
 ### Animations
 - **Framer Motion** — page transitions via `<PageTransition>` wrapper
@@ -424,6 +425,7 @@ High-frequency GPS pings are sent directly over WebSocket (`location:ping` event
 
 ### Component Patterns
 - Sidebars are role-specific: `sidebar.tsx`, `driver-sidebar.tsx`, `employed-driver-sidebar.tsx`, `superadmin-sidebar.tsx`
+- Theme toggle has been removed from sidebars; only `DriverSidebar` accepts an optional `userName` prop; the other three accept no props
 - Pages are self-contained with their own data fetching via `useEffect`
 - Loading states use `<LoadingPackage />` animated component
 - Empty states use `<EmptyState />` component with icons

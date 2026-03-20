@@ -14,11 +14,66 @@
 const winston = require('winston');
 const env = require('./env');
 
+const SPLAT = Symbol.for('splat');
+
+const normalizeStructuredLog = winston.format((info) => {
+    const splat = Array.isArray(info[SPLAT]) ? [...info[SPLAT]] : [];
+    const normalizedMeta = {};
+
+    const serializeError = (value) => ({
+        name: value.name,
+        message: value.message,
+        stack: value.stack,
+    });
+
+    const mergeMeta = (value) => {
+        if (!value) return;
+
+        if (value instanceof Error) {
+            normalizedMeta.err = serializeError(value);
+            return;
+        }
+
+        if (typeof value === 'object') {
+            for (const [key, entry] of Object.entries(value)) {
+                normalizedMeta[key] = entry instanceof Error ? serializeError(entry) : entry;
+            }
+        }
+    };
+
+    let renderedMessage = info.message;
+
+    if (renderedMessage && typeof renderedMessage === 'object') {
+        mergeMeta(renderedMessage);
+        renderedMessage = typeof splat[0] === 'string' ? splat.shift() : 'Log event';
+    }
+
+    while (splat.length > 0) {
+        const value = splat.shift();
+        if (!renderedMessage && typeof value === 'string') {
+            renderedMessage = value;
+            continue;
+        }
+        mergeMeta(value);
+    }
+
+    info.message = typeof renderedMessage === 'string' ? renderedMessage : String(renderedMessage);
+
+    for (const [key, value] of Object.entries(normalizedMeta)) {
+        if (info[key] === undefined) {
+            info[key] = value;
+        }
+    }
+
+    return info;
+});
+
 const logger = winston.createLogger({
     level: env.nodeEnv === 'production' ? 'info' : 'debug',
     format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         winston.format.errors({ stack: true }),
+        normalizeStructuredLog(),
         winston.format.json(),
     ),
     defaultMeta: { service: 'dispatchCore' },

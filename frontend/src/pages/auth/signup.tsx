@@ -1,6 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAutoTheme } from "@/hooks/useAutoTheme";
+import { useAutoTheme } from "@/hooks/app/useAutoTheme";
 import { applyAuthSession, type AuthLoginResponse } from "@/lib/session";
 
 import {

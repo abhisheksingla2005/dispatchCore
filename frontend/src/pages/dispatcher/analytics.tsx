@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import { get } from "@/lib/api";
 import {
   BarChart3,
@@ -219,7 +218,6 @@ function Sparkline({
 /* ═══════════════════════════════════════════════════════════════ */
 
 export default function DispatcherAnalyticsPage() {
-  const { isDark, setIsDark } = useTheme();
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [stats, setStats] = useState<BackendStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -385,7 +383,7 @@ export default function DispatcherAnalyticsPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
@@ -520,7 +518,7 @@ export default function DispatcherAnalyticsPage() {
                 <BarChartSVG
                   data={dailyOrders.map((d) => d.count)}
                   labels={dailyOrders.map((d) => format(d.date, "MMM d"))}
-                  color={isDark ? "#f97316" : "#ea580c"}
+                  color="#ea580c"
                   height={200}
                 />
               </motion.div>

@@ -10,7 +10,7 @@ import { useRef, useState, useEffect } from "react";
 import {
   useAddressGeocode,
   type GeocodeSuggestion,
-} from "@/hooks/useAddressGeocode";
+} from "@/hooks/location/useAddressGeocode";
 import { Loader2, MapPin } from "lucide-react";
 
 interface AddressInputProps {

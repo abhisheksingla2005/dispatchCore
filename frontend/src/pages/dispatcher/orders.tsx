@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Search,
   Plus,
@@ -18,7 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import LoadingPackage from "@/components/ui/loading-package";
 import { fetchShipments } from "@/services/dispatcher/dashboard";
 import type { Shipment } from "@/types/dispatcher/dashboard";
-import { AddressInput } from "@/components/AddressInput";
+import { AddressInput } from "@/components/forms/AddressInput";
 
 /* ─── Status Config ─── */
 type OrderStatus = "Pending" | "Shipping" | "Delivered";
@@ -46,7 +45,6 @@ const statusConfig: Record<
 
 /* ─── Page ─── */
 export default function OrdersPage() {
-  const { isDark, setIsDark } = useTheme();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
   const [loading, setLoading] = useState(true);
@@ -109,7 +107,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">

@@ -16,14 +16,15 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import MapView from "@/components/map/MapView";
 import type { MapMarker } from "@/components/map/MapView";
-import { useOrderTracking, useOrderMessages } from "@/hooks/useSocket";
+import { useOrderTracking, useOrderMessages } from "@/hooks/realtime/useSocket";
+import { ApiRequestError } from "@/lib/api";
 import {
   fetchMessages,
   sendChatMessage,
   markMessagesRead,
   type ChatMsg,
   type ChatChannel,
-} from "@/services/messaging";
+} from "@/services/shared/messaging";
 import {
   Package,
   MapPin,
@@ -115,6 +116,10 @@ function formatShortDate(value: string | null | undefined): string {
   });
 }
 
+function isArchivedOrderStatus(status: string | null | undefined): boolean {
+  return status === "DELIVERED" || status === "CANCELLED";
+}
+
 // ── Status timeline config ──
 
 const statusSteps = [
@@ -186,6 +191,7 @@ function InlineChatModal({
   recipientName,
   otherName,
   headerColor,
+  isArchived,
 }: {
   open: boolean;
   onClose: () => void;
@@ -195,10 +201,12 @@ function InlineChatModal({
   recipientName: string;
   otherName: string;
   headerColor: string;
+  isArchived: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = useCallback(async () => {
@@ -244,9 +252,10 @@ function InlineChatModal({
   );
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isArchived) return;
     const text = input.trim();
     setInput("");
+    setSendError(null);
     try {
       const sent = await sendChatMessage(orderId, channel, {
         sender_type: "recipient",
@@ -259,6 +268,14 @@ function InlineChatModal({
         return [...prev, sent];
       });
     } catch (err) {
+      if (
+        err instanceof ApiRequestError &&
+        err.message === "Chat is closed for completed orders"
+      ) {
+        setSendError("This chat is closed because the order is completed.");
+      } else {
+        setSendError("Failed to send message. Please try again.");
+      }
       console.error("Failed to send:", err);
       setInput(text);
     }
@@ -337,23 +354,40 @@ function InlineChatModal({
       </div>
 
       <div className="px-3 py-3 border-t border-border">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-            className="flex-1 px-3 py-2 text-sm border border-border rounded-xl bg-muted focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className={`p-2 rounded-xl transition-colors ${input.trim() ? "bg-primary text-white hover:bg-primary/90" : "bg-secondary text-muted-foreground cursor-not-allowed"}`}
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
+        {sendError && (
+          <div className="mb-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {sendError}
+          </div>
+        )}
+        {isArchived ? (
+          <div className="rounded-xl border border-border bg-muted/40 px-3 py-3">
+            <p className="text-sm font-medium text-foreground">
+              Chat closed after completion
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              You can still read the conversation history, but new messages are
+              disabled after delivery or cancellation.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+              className="flex-1 px-3 py-2 text-sm border border-border rounded-xl bg-muted focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className={`p-2 rounded-xl transition-colors ${input.trim() ? "bg-primary text-white hover:bg-primary/90" : "bg-secondary text-muted-foreground cursor-not-allowed"}`}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1085,6 +1119,7 @@ export default function CustomerTrackingPage() {
           recipientName={recipientName}
           otherName={chatOtherName}
           headerColor={chatHeaderColor}
+          isArchived={isArchivedOrderStatus(data.order.status)}
         />
       )}
 

@@ -7,10 +7,10 @@
 
 const express = require('express');
 const helmet = require('helmet');
-const morgan = require('morgan');
 const corsMiddleware = require('./config/cors');
 const { apiLimiter } = require('./middlewares/rateLimiter');
 const errorHandler = require('./middlewares/errorHandler');
+const requestIdentity = require('./middlewares/requestIdentity');
 const routes = require('./routes');
 const logger = require('./config/logger');
 
@@ -20,11 +20,25 @@ const app = express();
 app.use(helmet());
 
 // ── HTTP Request Logging ──
-app.use(
-    morgan('combined', {
-        stream: { write: (message) => logger.info(message.trim()) },
-    }),
-);
+app.use((req, res, next) => {
+    const start = process.hrtime.bigint();
+
+    res.on('finish', () => {
+        const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+        logger.info(
+            {
+                method: req.method,
+                path: req.originalUrl,
+                statusCode: res.statusCode,
+                durationMs: Number(durationMs.toFixed(2)),
+                ip: req.ip,
+            },
+            'HTTP request',
+        );
+    });
+
+    next();
+});
 
 // ── Body Parsers ──
 app.use(express.json({ limit: '10mb' }));
@@ -32,6 +46,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── CORS ──
 app.use(corsMiddleware);
+
+// ── CE-01 Identity Context ──
+app.use(requestIdentity);
 
 // ── Rate Limiting (global) ──
 app.use('/api', apiLimiter);

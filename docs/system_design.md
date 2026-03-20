@@ -373,9 +373,10 @@ erDiagram
         int id PK
         int order_id FK
         string channel "dispatcher-driver | dispatcher-recipient | driver-recipient"
-        string sender_role "dispatcher | driver | recipient"
+        string sender_type "dispatcher | driver | recipient"
+        int sender_id "company.id | driver.id | null"
         string sender_name
-        text body
+        text text
         boolean is_read
         datetime created_at
     }
@@ -384,7 +385,7 @@ erDiagram
         int id PK
         string admin_name
         string admin_email
-        string theme "light | dark | system"
+        string theme "light | dark | system (default)"
         boolean email_reports
         boolean auto_approve_drivers
         datetime created_at
@@ -435,12 +436,13 @@ classDiagram
 
     class LocationService {
         -io: SocketServer
+        -broadcastContextCache: Map~driverId, CachedContext~
         +recordPing(driverId, lat, lng, speed, heading): LocationLog
         +getLatestLocation(driverId): LocationLog
         +getDriverLocations(companyId): LocationLog[]
         +broadcastLocation(driverId, location): void
-        -shouldBroadcast(driver): boolean
-        -getTargetRooms(driver): string[]
+        -_getBroadcastContext(driverId): Driver|null
+        -_getTargetRooms(context): string[]
     }
 
     class RouteMatchingService {
@@ -797,7 +799,7 @@ stateDiagram-v2
 #### Messages
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/api/messages/conversations` | List conversations (role-filtered) | Dispatcher / Driver |
+| GET | `/api/messages/conversations` | List conversations (role-filtered, `?bucket=active\|archived`; recipient access requires `tracking_code`) | Dispatcher / Driver / Recipient |
 | GET | `/api/messages/:orderId/:channel` | Get messages for an order channel | Dispatcher / Driver / Recipient |
 | POST | `/api/messages/:orderId/:channel` | Send a message | Dispatcher / Driver / Recipient |
 | PUT | `/api/messages/:orderId/:channel/read` | Mark messages as read | Dispatcher / Driver / Recipient |
@@ -870,7 +872,7 @@ The same `/api/history` endpoint returns different fields based on the caller's 
 | Layer | Measure | Implementation |
 |---|---|---|
 | Transport | HTTPS/TLS | SSL certificates |
-| Authentication | Header-based identity (CE-02: JWT) | `x-company-id`, `x-driver-id`, `x-user-role` headers |
+| Authentication | Header-based identity (CE-02: JWT) | `x-company-id`, `x-driver-id` headers |
 | Authorization | Tenant middleware | Every request verified against company_id |
 | Input | Validation & sanitization | Express-validator on all endpoints |
 | Database | Parameterized queries | Sequelize ORM (prevents SQL injection) |

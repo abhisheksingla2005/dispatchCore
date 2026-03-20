@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   MapPin,
   ArrowRight,
@@ -33,7 +32,6 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 };
 
 export default function DriverDeliveriesPage() {
-  const { isDark, setIsDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [deliveries, setDeliveries] = useState<ActiveDelivery[]>([]);
   const [selected, setSelected] = useState<ActiveDelivery | null>(null);
@@ -51,7 +49,7 @@ export default function DriverDeliveriesPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DriverSidebar />
       <div className="flex-1 bg-background overflow-auto flex flex-col lg:flex-row">
         {/* Left — Delivery List */}
         <div

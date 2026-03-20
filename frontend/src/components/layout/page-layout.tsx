@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
 import { Github, Twitter } from "lucide-react";
-import { useAutoTheme } from "@/hooks/useAutoTheme";
+import { useAutoTheme } from "@/hooks/app/useAutoTheme";
 
 interface PageLayoutProps {
   children: React.ReactNode;

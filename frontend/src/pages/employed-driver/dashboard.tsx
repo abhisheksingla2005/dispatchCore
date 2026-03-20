@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { EmployedDriverSidebar } from "@/components/dashboard/employed-driver-sidebar";
-import { useGeolocationPing } from "@/hooks/useGeolocationPing";
-import { useTheme } from "@/hooks/useTheme";
+import { useGeolocationPing } from "@/hooks/location/useGeolocationPing";
 import {
   CheckCircle2,
   Star,
@@ -79,7 +78,6 @@ function statusLabel(s: string): string {
 
 export default function EmployedDriverDashboard() {
   const navigate = useNavigate();
-  const { isDark, setIsDark } = useTheme();
   const [user, setUser] = useState<EmployedDriverUser | null>(null);
   const [stats, setStats] = useState<EmployedDashboardStats | null>(null);
   const [orders, setOrders] = useState<AssignedOrder[]>([]);
@@ -173,7 +171,7 @@ export default function EmployedDriverDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-screen w-full">
-        <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+        <EmployedDriverSidebar />
         <div className="flex-1 flex items-center justify-center">
           <LoadingPackage text="Loading dashboard..." />
         </div>
@@ -183,7 +181,7 @@ export default function EmployedDriverDashboard() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <EmployedDriverSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top bar */}

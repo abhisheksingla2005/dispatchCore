@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   MapPin,
   ArrowRight,
@@ -44,7 +43,6 @@ const statusConfig: Record<
 };
 
 export default function DriverBidsPage() {
-  const { isDark, setIsDark } = useTheme();
   const [filter, setFilter] = useState<BidStatus | "all">("all");
   const [loading, setLoading] = useState(true);
   const [bids, setBids] = useState<DriverBid[]>([]);
@@ -73,7 +71,7 @@ export default function DriverBidsPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DriverSidebar />
       <div className="flex-1 bg-background overflow-auto">
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
           <h1 className="text-xl font-bold text-foreground">

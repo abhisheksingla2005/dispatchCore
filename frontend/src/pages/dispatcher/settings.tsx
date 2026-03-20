@@ -7,7 +7,7 @@ import {
   ToggleRow,
   type SettingsTabItem,
 } from "@/components/settings/workspace";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme } from "@/hooks/app/useTheme";
 import {
   Bell,
   BriefcaseBusiness,
@@ -27,8 +27,8 @@ import {
   changeCompanyPassword,
   fetchCompanySettings,
   saveCompanySettings,
-} from "@/services/settings";
-import type { CompanySettings } from "@/types/settings";
+} from "@/services/shared/settings";
+import type { CompanySettings } from "@/types/shared/settings";
 
 const tabs: SettingsTabItem[] = [
   { id: "profile", label: "Profile", icon: User, description: "Account identity" },
@@ -40,10 +40,10 @@ const tabs: SettingsTabItem[] = [
 ];
 
 const accentClass =
-  "bg-primary text-primary-foreground shadow-[0_24px_60px_-32px_rgba(251,146,60,0.95)]";
+  "bg-primary text-primary-foreground shadow-lg";
 
 export default function SettingsPage() {
-  const { isDark, setMode, setIsDark } = useTheme();
+  const { setMode } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -79,7 +79,7 @@ export default function SettingsPage() {
     }
 
     load();
-  }, [companyId, setIsDark]);
+  }, [companyId, setMode]);
 
   const initials = useMemo(() => {
     const name = settings?.name || "Company";
@@ -157,7 +157,7 @@ export default function SettingsPage() {
   if (loading || !settings) {
     return (
       <div className="flex min-h-screen w-full">
-        <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+        <DashboardSidebar />
         <div className="flex flex-1 items-center justify-center">
           <LoadingPackage />
         </div>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       accentClass={accentClass}
-      sidebar={<DashboardSidebar isDark={isDark} setIsDark={setIsDark} />}
+      sidebar={<DashboardSidebar />}
     >
       {error && <SettingsNotice tone="error">{error}</SettingsNotice>}
       {success && <SettingsNotice tone="success">{success}</SettingsNotice>}
@@ -597,7 +597,7 @@ function Actions({
         type={buttonType}
         onClick={buttonType === "submit" ? undefined : onSave}
         disabled={saving}
-        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_24px_60px_-32px_rgba(251,146,60,0.95)] transition-colors hover:bg-primary/90 disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-colors hover:bg-primary/90 disabled:opacity-60"
       >
         {saving ? (
           <Loader2 className="h-4 w-4 animate-spin" />

@@ -14,6 +14,8 @@ export type ChatChannel =
   | "dispatcher-recipient"
   | "driver-recipient";
 
+export type ConversationBucket = "active" | "archived";
+
 export interface OtherParticipant {
   type: "dispatcher" | "driver" | "recipient";
   id: number | null;
@@ -58,8 +60,9 @@ export interface ChatMsg {
 export async function fetchConversations(
   role: "dispatcher" | "driver" | "recipient",
   trackingCode?: string,
+  bucket: ConversationBucket = "active",
 ): Promise<Conversation[]> {
-  const params: Record<string, string> = { role };
+  const params: Record<string, string> = { role, bucket };
   if (trackingCode) params.tracking_code = trackingCode;
   return get<Conversation[]>(`/messages/conversations${qs(params)}`);
 }

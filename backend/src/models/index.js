@@ -7,26 +7,23 @@
 
 const { Sequelize } = require('sequelize');
 const env = require('../config/env');
+const databaseConfig = require('../config/database');
 const logger = require('../config/logger');
 
-// Create Sequelize instance
-const sequelize = new Sequelize(env.db.name, env.db.user, env.db.pass, {
-  host: env.db.host,
-  port: env.db.port,
-  dialect: 'mysql',
-  logging: env.nodeEnv === 'development' ? (msg) => logger.debug(msg) : false,
-  pool: {
-    min: 2,
-    max: 10,
-    acquire: 30000,
-    idle: 10000,
+const runtimeConfig = databaseConfig[env.nodeEnv] || databaseConfig.development;
+
+// Create Sequelize instance from the shared DB config so runtime and CLI stay aligned.
+const sequelize = new Sequelize(
+  runtimeConfig.database,
+  runtimeConfig.username,
+  runtimeConfig.password,
+  {
+    ...runtimeConfig,
+    logging: runtimeConfig.logging
+      ? (sql) => logger.debug({ sql }, 'Sequelize query')
+      : false,
   },
-  define: {
-    timestamps: true,
-    underscored: true,
-    freezeTableName: false,
-  },
-});
+);
 
 // Register models
 const models = {

@@ -8,7 +8,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SuperAdminSidebar } from "@/components/dashboard/superadmin-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Building2,
   Search,
@@ -37,7 +36,6 @@ const planColors: Record<string, string> = {
 
 export default function SuperAdminCompaniesPage() {
   const navigate = useNavigate();
-  const { isDark, setIsDark } = useTheme();
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +131,7 @@ export default function SuperAdminCompaniesPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <SuperAdminSidebar isDark={isDark} setIsDark={setIsDark} />
+      <SuperAdminSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top Bar */}

@@ -3,32 +3,13 @@
  *
  * Central HTTP client for all frontend ↔ backend communication.
  * Unwraps the backend response envelope: { success, data, meta }
- *
- * Headers:
- *   x-company-id  — Tenant scoping (required for most endpoints)
- *   x-driver-id   — Driver identity (future: JWT)
  */
+
+import { getIdentityHeaders } from "@/lib/session";
 
 // ── Config ──
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api";
-
-/**
- * Dev-mode identity headers.
- * In production these will come from auth context / JWT.
- * Values are set during login via the account-based auth flow.
- */
-function getIdentityHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {};
-
-  const companyId = localStorage.getItem("dc_company_id");
-  const driverId = localStorage.getItem("dc_driver_id");
-
-  if (companyId) headers["x-company-id"] = companyId;
-  if (driverId) headers["x-driver-id"] = driverId;
-
-  return headers;
-}
 
 // ── Response Types ──
 

@@ -1,5 +1,5 @@
-import { usePageMeta } from "@/hooks/usePageMeta";
-import { PageLayout } from "@/components/page-layout";
+import { usePageMeta } from "@/hooks/app/usePageMeta";
+import { PageLayout } from "@/components/layout/page-layout";
 import { Target, Zap, Shield, Users } from "lucide-react";
 
 const values = [

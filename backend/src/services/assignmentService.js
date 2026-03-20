@@ -133,12 +133,15 @@ class AssignmentService {
 
       await transaction.commit();
 
-      logger.info('Order assigned successfully', {
-        orderId,
-        driverId,
-        assignmentId: assignment.id,
-        source: ASSIGNMENT_SOURCE.DIRECT,
-      });
+      logger.info(
+        {
+          orderId,
+          driverId,
+          assignmentId: assignment.id,
+          source: ASSIGNMENT_SOURCE.DIRECT,
+        },
+        'Order assigned successfully',
+      );
 
       // Emit real-time events
       this._emitAssignmentEvents(assignment, order, driver);
@@ -199,7 +202,7 @@ class AssignmentService {
 
       await transaction.commit();
 
-      logger.info('Assignment cancelled', { assignmentId });
+      logger.info({ assignmentId }, 'Assignment cancelled');
     } catch (error) {
       await transaction.rollback();
       throw error;

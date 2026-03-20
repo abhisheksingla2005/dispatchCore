@@ -1,5 +1,5 @@
-import { usePageMeta } from "@/hooks/usePageMeta";
-import { PageLayout } from "@/components/page-layout";
+import { usePageMeta } from "@/hooks/app/usePageMeta";
+import { PageLayout } from "@/components/layout/page-layout";
 
 export default function PrivacyPage() {
   usePageMeta("Privacy Policy", "How dispatchCore handles and protects your personal data.");

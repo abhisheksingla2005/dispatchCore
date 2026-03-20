@@ -7,13 +7,11 @@
 import { useSearchParams } from "react-router-dom";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import ChatPanel from "@/components/chat/ChatPanel";
-import type { ChatChannel } from "@/services/messaging";
-import { useTheme } from "@/hooks/useTheme";
+import type { ChatChannel } from "@/services/shared/messaging";
 
 export default function MessagesPage() {
   const companyId = localStorage.getItem("dc_company_id");
   const userName = localStorage.getItem("dc_user_name") || "Dispatcher";
-  const { isDark, setIsDark } = useTheme();
   const [searchParams] = useSearchParams();
   const initialOrderId = searchParams.get("orderId")
     ? Number(searchParams.get("orderId"))
@@ -22,7 +20,7 @@ export default function MessagesPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
       <main className="flex-1 flex flex-col p-4 overflow-hidden">
         <ChatPanel
           role="dispatcher"

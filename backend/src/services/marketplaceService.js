@@ -50,7 +50,7 @@ class MarketplaceService {
             listed_price: price,
         });
 
-        logger.info('Order listed on marketplace', { orderId, price });
+        logger.info({ orderId, price }, 'Order listed on marketplace');
 
         this._emitToMarketplace(order.company_id, 'order:listed', {
             orderId: order.id,
@@ -87,7 +87,7 @@ class MarketplaceService {
             listed_price: null,
         });
 
-        logger.info('Order unlisted from marketplace', { orderId });
+        logger.info({ orderId }, 'Order unlisted from marketplace');
 
         this._emitToMarketplace(order.company_id, 'order:unlisted', { orderId });
 
@@ -142,7 +142,7 @@ class MarketplaceService {
             message,
         });
 
-        logger.info('New bid placed', { bidId: bid.id, orderId, driverId, offeredPrice });
+        logger.info({ bidId: bid.id, orderId, driverId, offeredPrice }, 'New bid placed');
 
         // Notify dispatchers of the company about the new bid
         this._emitToMarketplace(order.company_id, 'bid:new', {
@@ -232,12 +232,15 @@ class MarketplaceService {
 
             await transaction.commit();
 
-            logger.info('Bid accepted and assignment created', {
-                bidId,
-                orderId: bid.order_id,
-                driverId: bid.driver_id,
-                assignmentId: assignment.id,
-            });
+            logger.info(
+                {
+                    bidId,
+                    orderId: bid.order_id,
+                    driverId: bid.driver_id,
+                    assignmentId: assignment.id,
+                },
+                'Bid accepted and assignment created',
+            );
 
             // Emit events
             this._emitBidResult(bid, assignment);
@@ -270,7 +273,7 @@ class MarketplaceService {
 
         await bid.update({ status: BID_STATUS.REJECTED });
 
-        logger.info('Bid rejected', { bidId });
+        logger.info({ bidId }, 'Bid rejected');
 
         if (this.io) {
             this.io.to(`driver:${bid.driver_id}`).emit('bid:rejected', {

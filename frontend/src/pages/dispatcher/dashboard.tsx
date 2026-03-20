@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   useDashboardStats,
   useDashboardUser,
@@ -27,7 +26,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import LoadingPackage from "@/components/ui/loading-package";
-import { AddressInput } from "@/components/AddressInput";
+import { AddressInput } from "@/components/forms/AddressInput";
 
 /* ─── Status color map ─── */
 const statusColors: Record<ShipmentStatus, string> = {
@@ -72,7 +71,6 @@ const statsMeta = [
 /* ─── Dashboard Page ─── */
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { isDark, setIsDark } = useTheme();
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(
     null,
   );
@@ -321,7 +319,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top Bar */}

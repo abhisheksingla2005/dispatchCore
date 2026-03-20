@@ -8,7 +8,7 @@ import {
   ToggleRow,
   type SettingsTabItem,
 } from "@/components/settings/workspace";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme } from "@/hooks/app/useTheme";
 import {
   Bell,
   Database,
@@ -26,8 +26,8 @@ import {
 import {
   fetchSuperadminSettings,
   saveSuperadminSettings,
-} from "@/services/settings";
-import type { SuperadminSettings } from "@/types/settings";
+} from "@/services/shared/settings";
+import type { SuperadminSettings } from "@/types/shared/settings";
 
 const tabs: SettingsTabItem[] = [
   { id: "profile", label: "Profile", icon: User, description: "Platform identity" },
@@ -37,10 +37,10 @@ const tabs: SettingsTabItem[] = [
 ];
 
 const accentClass =
-  "bg-red-600 text-white shadow-[0_24px_60px_-32px_rgba(220,38,38,0.95)]";
+  "bg-primary text-primary-foreground shadow-lg";
 
 export default function SuperAdminSettingsPage() {
-  const { isDark, setMode, setIsDark } = useTheme();
+  const { setMode } = useTheme();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
@@ -107,7 +107,7 @@ export default function SuperAdminSettingsPage() {
   if (loading || !settings) {
     return (
       <div className="flex min-h-screen w-full">
-        <SuperAdminSidebar isDark={isDark} setIsDark={setIsDark} />
+        <SuperAdminSidebar />
         <div className="flex flex-1 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -123,7 +123,7 @@ export default function SuperAdminSettingsPage() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       accentClass={accentClass}
-      sidebar={<SuperAdminSidebar isDark={isDark} setIsDark={setIsDark} />}
+      sidebar={<SuperAdminSidebar />}
     >
       {error && <SettingsNotice tone="error">{error}</SettingsNotice>}
       {success && <SettingsNotice tone="success">{success}</SettingsNotice>}
@@ -134,14 +134,14 @@ export default function SuperAdminSettingsPage() {
             title="Superadmin Profile"
             description="Persistent profile values are stored separately from environment-based login credentials."
             actions={
-              <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-medium text-red-400">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 SUPERADMIN
               </span>
             }
           >
             <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
               <div className="rounded-3xl border border-border bg-muted/40 p-6">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-red-600 to-red-400 text-3xl font-bold text-white">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 text-3xl font-bold text-white">
                   {settings.name
                     .split(" ")
                     .map((part) => part[0])
@@ -186,7 +186,7 @@ export default function SuperAdminSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-medium text-white shadow-[0_24px_60px_-32px_rgba(220,38,38,0.95)] transition-colors hover:bg-red-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary/90 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -223,7 +223,7 @@ export default function SuperAdminSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-red-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Company registrations"
@@ -242,7 +242,7 @@ export default function SuperAdminSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-red-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Driver verifications"
@@ -261,7 +261,7 @@ export default function SuperAdminSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-red-600"
+                activeClass="bg-primary"
               />
               <ToggleRow
                 label="Daily summary"
@@ -280,7 +280,7 @@ export default function SuperAdminSettingsPage() {
                       : prev,
                   )
                 }
-                activeClass="bg-red-600"
+                activeClass="bg-primary"
               />
             </div>
           </SettingsCard>
@@ -288,7 +288,7 @@ export default function SuperAdminSettingsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-medium text-white shadow-[0_24px_60px_-32px_rgba(220,38,38,0.95)] transition-colors hover:bg-red-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary/90 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -330,8 +330,8 @@ export default function SuperAdminSettingsPage() {
                     }}
                     className={`rounded-3xl border p-6 text-left transition-all ${
                       active
-                        ? "border-red-600 bg-red-600/10"
-                        : "border-border bg-muted/30 hover:border-red-500/40"
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-muted/30 hover:border-primary/40"
                     }`}
                   >
                     <p className="text-lg font-semibold text-foreground">
@@ -349,7 +349,7 @@ export default function SuperAdminSettingsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-3 text-sm font-medium text-white shadow-[0_24px_60px_-32px_rgba(220,38,38,0.95)] transition-colors hover:bg-red-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary/90 disabled:opacity-60"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -483,7 +483,7 @@ export default function SuperAdminSettingsPage() {
           >
             <button
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
             >
               <LogOut className="h-4 w-4" />
               Sign out
@@ -519,7 +519,7 @@ function Field({
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-full border border-border bg-muted/30 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors focus:border-red-500"
+          className="w-full rounded-full border border-border bg-muted/30 py-3 pl-11 pr-4 text-sm text-foreground outline-none transition-colors focus:border-primary"
         />
       </div>
     </label>
@@ -548,7 +548,7 @@ function MetricCard({
 }) {
   return (
     <div className="rounded-3xl border border-border bg-muted/30 p-5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 text-red-400">
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
         <Icon className="h-4 w-4" />
       </div>
       <p className="mt-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">

@@ -13,8 +13,6 @@ import {
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 interface SidebarProps {
-  isDark: boolean;
-  setIsDark: (v: boolean) => void;
   userName?: string;
 }
 
@@ -29,8 +27,6 @@ const navItems = [
 ];
 
 export function DriverSidebar({
-  isDark: _isDark,
-  setIsDark: _setIsDark,
   userName: propName,
 }: SidebarProps) {
   const [open, setOpen] = useState(true);

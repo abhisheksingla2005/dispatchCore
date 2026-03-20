@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import MapView from "@/components/map/MapView";
 import type { MapMarker, MapRoute } from "@/components/map/MapView";
 import { get } from "@/lib/api";
@@ -46,7 +45,6 @@ interface Order {
 
 /* ─── Map Overview Page ─── */
 export default function MapOverviewPage() {
-  const { isDark, setIsDark } = useTheme();
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([]);
@@ -292,7 +290,7 @@ export default function MapOverviewPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
       <div className="flex-1 bg-background relative overflow-hidden">
         {/* MapLibre GL Map */}
         <div className="absolute inset-0">

@@ -30,7 +30,7 @@ const COMPANY_NOTIFICATION_DEFAULTS = Object.freeze({
 
 /** @type {{ theme: string }} Default appearance preferences (shared) */
 const APPEARANCE_DEFAULTS = Object.freeze({
-  theme: 'dark',
+  theme: 'system',
 });
 
 /** @type {Record<string, number>} Default vehicle capacity by type (kg) */

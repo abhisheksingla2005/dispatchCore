@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Search,
   Plus,
@@ -50,7 +49,6 @@ const statusColors: Record<string, string> = {
 
 /* ─── Drivers Page ─── */
 export default function DriversPage() {
-  const { isDark, setIsDark } = useTheme();
   const [drivers, setDrivers] = useState<DriverRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDriver, setShowAddDriver] = useState(false);
@@ -134,7 +132,7 @@ export default function DriversPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}

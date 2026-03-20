@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useGeolocationPing } from "@/hooks/useGeolocationPing";
-import { useTheme } from "@/hooks/useTheme";
+import { useGeolocationPing } from "@/hooks/location/useGeolocationPing";
 import {
   useDriverUser,
   useDriverStats,
@@ -78,7 +77,6 @@ const bidStatusConfig = {
 /* ─── Driver Dashboard ─── */
 export default function DriverDashboardPage() {
   const navigate = useNavigate();
-  const { isDark, setIsDark } = useTheme();
   const [deliveryTab, setDeliveryTab] = useState<"active" | "completed">(
     "active",
   );
@@ -128,8 +126,6 @@ export default function DriverDashboardPage() {
   return (
     <div className={`flex min-h-screen w-full`}>
       <DriverSidebar
-        isDark={isDark}
-        setIsDark={setIsDark}
         userName={user?.name}
       />
 

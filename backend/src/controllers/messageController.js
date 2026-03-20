@@ -15,6 +15,9 @@ const { Message, Order, Assignment, Driver, Company } = require('../models');
 const { success } = require('../utils/response');
 const { NotFoundError, ForbiddenError, ValidationError } = require('../utils/errors');
 
+const ACTIVE_ORDER_STATUSES = ['UNASSIGNED', 'LISTED', 'ASSIGNED', 'PICKED_UP', 'EN_ROUTE'];
+const ARCHIVED_ORDER_STATUSES = ['DELIVERED', 'CANCELLED'];
+
 // ── Helpers ──
 
 /**
@@ -32,6 +35,16 @@ function deriveChannel(roleA, roleB) {
 function otherRole(channel, myRole) {
   const parts = channel.split('-');
   return parts.find((p) => p !== myRole) || parts[1];
+}
+
+function getStatusesForBucket(bucket) {
+  if (bucket === 'active') return ACTIVE_ORDER_STATUSES;
+  if (bucket === 'archived') return ARCHIVED_ORDER_STATUSES;
+  throw new ValidationError('bucket must be active or archived');
+}
+
+function isArchivedOrder(status) {
+  return ARCHIVED_ORDER_STATUSES.includes(status);
 }
 
 /**
@@ -80,7 +93,8 @@ function getOrderParticipants(order, company, assignment) {
  */
 const getConversations = async (req, res, next) => {
   try {
-    const { role } = req.query;
+    const { role, bucket = 'active' } = req.query;
+    const allowedStatuses = getStatusesForBucket(bucket);
 
     let orders;
     const eagerIncludes = [
@@ -127,6 +141,8 @@ const getConversations = async (req, res, next) => {
     } else {
       throw new ValidationError('role must be dispatcher, driver, or recipient');
     }
+
+    orders = orders.filter((order) => allowedStatuses.includes(order.status));
 
     // Batch-fetch message stats for all order IDs
     const orderIds = orders.map((o) => o.id);
@@ -334,6 +350,9 @@ const sendMessage = async (req, res, next) => {
 
     const order = await Order.findByPk(orderId);
     if (!order) throw new NotFoundError('Order');
+    if (isArchivedOrder(order.status)) {
+      throw new ValidationError('Chat is closed for completed orders');
+    }
 
     // Auth
     if (sender_type === 'dispatcher') {

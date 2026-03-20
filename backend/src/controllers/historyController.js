@@ -15,19 +15,16 @@ const getHistory = async (req, res, next) => {
     const { status, dateFrom, dateTo, page, limit } = req.query;
     const filters = { status, dateFrom, dateTo, page, limit };
 
-    // CE-02: Replace with req.user from JWT
-    const role = req.headers['x-user-role'] || ROLES.DISPATCHER;
-    const driverId = req.headers['x-driver-id'] ? parseInt(req.headers['x-driver-id'], 10) : null;
+    const driverId = req.identity?.driverId ?? null;
+    const isDispatcherScope = Boolean(req.tenantId || req.identity?.companyId || req.identity?.isSuperadmin);
 
     let result;
 
-    // If a driver identity is present, always use driver history
-    // (independent drivers don't send x-user-role)
     if (driverId) {
       const driver = await Driver.findByPk(driverId);
       const driverType = driver ? driver.type : 'EMPLOYED';
       result = await historyService.getDriverHistory(driverId, driverType, filters);
-    } else if (role === ROLES.DISPATCHER || role === ROLES.SUPERADMIN) {
+    } else if (isDispatcherScope) {
       result = await historyService.getDispatcherHistory(req.tenantId, filters);
     } else {
       result = { records: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0 } };
@@ -43,8 +40,8 @@ const getDeliveryDetail = async (req, res, next) => {
   try {
     const historyService = req.app.get('historyService');
 
-    const driverId = req.headers['x-driver-id'] ? parseInt(req.headers['x-driver-id'], 10) : null;
-    const role = driverId ? 'driver' : req.headers['x-user-role'] || ROLES.DISPATCHER;
+    const driverId = req.identity?.driverId ?? null;
+    const role = driverId ? 'driver' : ROLES.DISPATCHER;
 
     const record = await historyService.getDeliveryDetail(
       parseInt(req.params.assignmentId, 10),

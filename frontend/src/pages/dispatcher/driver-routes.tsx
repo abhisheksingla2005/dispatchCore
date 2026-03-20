@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import { get, post } from "@/lib/api";
 import {
   Route,
@@ -106,7 +105,6 @@ interface UnassignedOrder {
 
 /* ─── Component ─── */
 export default function DispatcherDriverRoutesPage() {
-  const { isDark, setIsDark } = useTheme();
   const [activeRoutes, setActiveRoutes] = useState<ActiveRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -237,7 +235,7 @@ export default function DispatcherDriverRoutesPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}

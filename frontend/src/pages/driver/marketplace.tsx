@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   useDriverListings,
   useMyBids,
@@ -77,7 +76,6 @@ const bidStatusStyles: Record<
 
 /* ─── Driver Marketplace Page ─── */
 export default function DriverMarketplacePage() {
-  const { isDark, setIsDark } = useTheme();
   const [sortBy, setSortBy] = useState<DriverSortBy>("priority");
   const [bidModal, setBidModal] = useState<DriverMarketplaceListing | null>(
     null,
@@ -130,7 +128,7 @@ export default function DriverMarketplacePage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DriverSidebar />
 
       <div className="flex-1 bg-background overflow-auto flex flex-col">
         <div className="flex-1 flex flex-col lg:flex-row">

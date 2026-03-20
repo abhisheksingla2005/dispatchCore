@@ -28,6 +28,18 @@ const SESSION_KEYS = [
   "dc_user_email",
 ] as const;
 
+export function getIdentityHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+
+  const companyId = localStorage.getItem("dc_company_id");
+  const driverId = localStorage.getItem("dc_driver_id");
+
+  if (companyId) headers["x-company-id"] = companyId;
+  if (driverId) headers["x-driver-id"] = driverId;
+
+  return headers;
+}
+
 export function clearSessionStorage() {
   SESSION_KEYS.forEach((key) => localStorage.removeItem(key));
 }

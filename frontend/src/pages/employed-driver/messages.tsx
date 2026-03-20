@@ -7,13 +7,11 @@
 import { useSearchParams } from "react-router-dom";
 import { EmployedDriverSidebar } from "@/components/dashboard/employed-driver-sidebar";
 import ChatPanel from "@/components/chat/ChatPanel";
-import type { ChatChannel } from "@/services/messaging";
-import { useTheme } from "@/hooks/useTheme";
+import type { ChatChannel } from "@/services/shared/messaging";
 
 export default function EmployedDriverMessagesPage() {
   const driverId = localStorage.getItem("dc_driver_id");
   const driverName = localStorage.getItem("dc_user_name") || "Driver";
-  const { isDark, setIsDark } = useTheme();
   const [searchParams] = useSearchParams();
   const initialOrderId = searchParams.get("orderId")
     ? Number(searchParams.get("orderId"))
@@ -22,7 +20,7 @@ export default function EmployedDriverMessagesPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <EmployedDriverSidebar />
       <main className="flex-1 flex flex-col p-4 overflow-hidden">
         <ChatPanel
           role="driver"

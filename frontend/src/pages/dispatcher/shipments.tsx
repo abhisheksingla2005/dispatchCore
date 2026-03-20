@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import { get } from "@/lib/api";
 import { calcDistance, estimateTime } from "@/lib/geo";
 import {
@@ -90,7 +89,6 @@ function mapProgress(s: string): number {
 
 /* ─── Shipments Page ─── */
 export default function ShipmentsPage() {
-  const { isDark, setIsDark } = useTheme();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | "ALL">(
     "ALL",
@@ -172,7 +170,7 @@ export default function ShipmentsPage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <DashboardSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DashboardSidebar />
       <div className="flex-1 bg-background overflow-auto flex flex-col lg:flex-row">
         {/* ═══ Left — Shipment List ═══ */}
         <div

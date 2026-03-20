@@ -7,6 +7,10 @@ const { verifyPassword } = require('../utils/password');
 const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || 'admin@dispatchcore.com').toLowerCase();
 const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || null;
 
+function hashForComparison(value) {
+  return crypto.createHash('sha256').update(String(value)).digest();
+}
+
 const login = async (req, res, next) => {
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
@@ -17,11 +21,9 @@ const login = async (req, res, next) => {
         throw new UnauthorizedError('Superadmin login is not configured');
       }
 
-      const passwordBuf = Buffer.from(password);
-      const expectedBuf = Buffer.from(SUPERADMIN_PASSWORD);
-      const isValid =
-        passwordBuf.length === expectedBuf.length &&
-        crypto.timingSafeEqual(passwordBuf, expectedBuf);
+      const inputHash = hashForComparison(password);
+      const expectedHash = hashForComparison(SUPERADMIN_PASSWORD);
+      const isValid = crypto.timingSafeEqual(inputHash, expectedHash);
       if (!isValid) {
         throw new UnauthorizedError('Incorrect email or password');
       }

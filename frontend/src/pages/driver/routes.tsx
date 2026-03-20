@@ -7,8 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { DriverSidebar } from "@/components/dashboard/driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
-import { AddressInput } from "@/components/AddressInput";
+import { AddressInput } from "@/components/forms/AddressInput";
 import { DatePicker } from "@/components/ui/date-picker";
 import { TimePicker } from "@/components/ui/time-picker";
 import { get, post, del } from "@/lib/api";
@@ -44,7 +43,6 @@ interface DriverRoute {
 
 /* ─── Component ─── */
 export default function DriverRoutesPage() {
-  const { isDark, setIsDark } = useTheme();
   const [routes, setRoutes] = useState<DriverRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -65,8 +63,8 @@ export default function DriverRoutesPage() {
     try {
       const data = await get<DriverRoute[]>("/drivers/routes/mine");
       setRoutes(data);
-    } catch {
-      // no-op
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load routes");
     } finally {
       setLoading(false);
     }
@@ -125,13 +123,10 @@ export default function DriverRoutesPage() {
       setRoutes((prev) =>
         prev.map((r) => (r.id === routeId ? { ...r, is_active: false } : r)),
       );
-    } catch {
-      // no-op
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to deactivate route");
     }
   };
-
-  const activeRoutes = routes.filter((r) => r.is_active);
-  const pastRoutes = routes.filter((r) => !r.is_active);
 
   const formatDeparture = (iso: string) => {
     const d = new Date(iso);
@@ -146,9 +141,16 @@ export default function DriverRoutesPage() {
 
   const isUpcoming = (iso: string) => new Date(iso) > new Date();
 
+  const activeRoutes = routes.filter(
+    (route) => route.is_active && isUpcoming(route.departure_time),
+  );
+  const routeHistory = routes.filter(
+    (route) => !route.is_active || !isUpcoming(route.departure_time),
+  );
+
   return (
     <div className="flex min-h-screen w-full">
-      <DriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <DriverSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}
@@ -276,14 +278,14 @@ export default function DriverRoutesPage() {
                 </div>
               )}
 
-              {/* Past / deactivated routes */}
-              {pastRoutes.length > 0 && (
+              {/* Departed / deactivated routes */}
+              {routeHistory.length > 0 && (
                 <div>
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                    Past Routes ({pastRoutes.length})
+                    Route History ({routeHistory.length})
                   </p>
                   <div className="space-y-3">
-                    {pastRoutes.map((route) => (
+                    {routeHistory.map((route) => (
                       <div
                         key={route.id}
                         className="p-5 rounded-3xl bg-card border border-border shadow-sm opacity-60"
@@ -304,6 +306,9 @@ export default function DriverRoutesPage() {
                           </div>
                           <span className="text-xs text-muted-foreground shrink-0">
                             {formatDeparture(route.departure_time)}
+                          </span>
+                          <span className="text-[10px] font-medium uppercase tracking-wide px-2 py-0.5 rounded-full bg-secondary text-muted-foreground shrink-0">
+                            {route.is_active ? "Departed" : "Inactive"}
                           </span>
                         </div>
                       </div>

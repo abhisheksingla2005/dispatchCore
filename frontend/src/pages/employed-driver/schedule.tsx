@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { EmployedDriverSidebar } from "@/components/dashboard/employed-driver-sidebar";
-import { useTheme } from "@/hooks/useTheme";
 import {
   Clock,
   ChevronLeft,
@@ -67,7 +66,6 @@ const orderStatusColors: Record<string, string> = {
 };
 
 export default function EmployedDriverSchedulePage() {
-  const { isDark, setIsDark } = useTheme();
   const [weekOffset, setWeekOffset] = useState(0);
   const [view, setView] = useState<"week" | "month">("month");
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -230,7 +228,7 @@ export default function EmployedDriverSchedulePage() {
 
   return (
     <div className="flex min-h-screen w-full">
-      <EmployedDriverSidebar isDark={isDark} setIsDark={setIsDark} />
+      <EmployedDriverSidebar />
       <div className="flex-1 bg-background overflow-auto">
         <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">

@@ -4,7 +4,9 @@ import MapView from "@/components/map/MapView";
 import type { MapMarker, MapRoute } from "@/components/map/MapView";
 import { get } from "@/lib/api";
 import { formatINR } from "@/lib/currency";
-import { Truck, Navigation, Layers, MapPin, Package } from "lucide-react";
+import { fetchDrivingRoute } from "@/lib/directions";
+import { buildCurvedRoute } from "@/lib/map-routes";
+import { Truck, Navigation, Layers, MapPin, Package, Loader2 } from "lucide-react";
 
 /* ─── Types ─── */
 interface Driver {
@@ -41,6 +43,9 @@ interface Order {
   delivery_lat: string | null;
   delivery_lng: string | null;
   listed_price: string | null;
+  assignment?: {
+    driver_id?: number | null;
+  } | null;
 }
 
 /* ─── Map Overview Page ─── */
@@ -51,6 +56,10 @@ export default function MapOverviewPage() {
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [layer, setLayer] = useState<"drivers" | "orders" | "all">("all");
+  const [selectedRouteCoordinates, setSelectedRouteCoordinates] = useState<
+    [number, number][] | null
+  >(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   // Fetch drivers + orders + live driver locations from API
   useEffect(() => {
@@ -92,6 +101,18 @@ export default function MapOverviewPage() {
     () => orders.filter((o) => !["DELIVERED", "CANCELLED"].includes(o.status)),
     [orders],
   );
+
+  const focusedOrder = useMemo(() => {
+    if (selectedOrder) return selectedOrder;
+    if (!selectedDriver) return null;
+    return (
+      activeOrders.find(
+        (order) =>
+          order.assignment?.driver_id === selectedDriver.id &&
+          ["ASSIGNED", "PICKED_UP", "EN_ROUTE"].includes(order.status),
+      ) ?? null
+    );
+  }, [selectedOrder, selectedDriver, activeOrders]);
 
   // Build order markers from real coordinates
   // When an order is selected, show pickup/delivery pins; otherwise show dots
@@ -145,56 +166,28 @@ export default function MapOverviewPage() {
     });
   }, [driverLocations, selectedDriver]);
 
-  // Generate a curved arc between two points (bezier-style)
-  function curvedLine(
-    start: [number, number],
-    end: [number, number],
-    segments = 40,
-  ): [number, number][] {
-    const midLng = (start[0] + end[0]) / 2;
-    const midLat = (start[1] + end[1]) / 2;
-
-    // Perpendicular offset for the control point
-    const dx = end[0] - start[0];
-    const dy = end[1] - start[1];
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const offset = dist * 0.2; // 20% of distance as curvature
-
-    // Control point offset perpendicular to the line
-    const ctrlLng = midLng + (-dy / dist) * offset;
-    const ctrlLat = midLat + (dx / dist) * offset;
-
-    const points: [number, number][] = [];
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      const invT = 1 - t;
-      // Quadratic bezier: B(t) = (1-t)²·P0 + 2(1-t)t·C + t²·P1
-      const lng =
-        invT * invT * start[0] + 2 * invT * t * ctrlLng + t * t * end[0];
-      const lat =
-        invT * invT * start[1] + 2 * invT * t * ctrlLat + t * t * end[1];
-      points.push([lng, lat]);
-    }
-    return points;
-  }
-
-  // Build curved route lines from pickup → delivery for each order
+  // Build route lines from pickup/driver → delivery for each order
   const orderRoutes: MapRoute[] = useMemo(() => {
     const routes: MapRoute[] = [];
     for (const o of activeOrders) {
       if (o.pickup_lat && o.pickup_lng && o.delivery_lat && o.delivery_lng) {
-        const start: [number, number] = [
-          parseFloat(o.pickup_lng),
-          parseFloat(o.pickup_lat),
-        ];
+        const assignedDriverLocation =
+          ["PICKED_UP", "EN_ROUTE"].includes(o.status) && o.assignment?.driver_id
+            ? driverLocations.find(
+                (location) => location.driverId === o.assignment?.driver_id,
+              )
+            : null;
+        const start: [number, number] = assignedDriverLocation
+          ? [assignedDriverLocation.lng, assignedDriverLocation.lat]
+          : [parseFloat(o.pickup_lng), parseFloat(o.pickup_lat)];
         const end: [number, number] = [
           parseFloat(o.delivery_lng),
           parseFloat(o.delivery_lat),
         ];
-        const isSelected = selectedOrder?.id === o.id;
+        const isSelected = focusedOrder?.id === o.id;
         const statusColor =
           o.status === "ASSIGNED"
-            ? "#f59e0b"
+            ? "#2563eb"
             : o.status === "PICKED_UP" || o.status === "EN_ROUTE"
               ? "#2563eb"
               : o.status === "LISTED"
@@ -202,14 +195,85 @@ export default function MapOverviewPage() {
                 : "#6b7280";
         routes.push({
           id: `route-${o.id}`,
-          coordinates: curvedLine(start, end),
+          coordinates:
+            focusedOrder?.id === o.id &&
+            selectedRouteCoordinates &&
+            selectedRouteCoordinates.length > 1
+              ? selectedRouteCoordinates
+              : buildCurvedRoute(start, end),
           color: statusColor,
           highlighted: isSelected,
         });
       }
     }
     return routes;
-  }, [activeOrders, selectedOrder]);
+  }, [activeOrders, focusedOrder, selectedRouteCoordinates, driverLocations]);
+
+  useEffect(() => {
+    if (
+      !focusedOrder?.pickup_lat ||
+      !focusedOrder?.pickup_lng ||
+      !focusedOrder?.delivery_lat ||
+      !focusedOrder?.delivery_lng
+    ) {
+      setSelectedRouteCoordinates(null);
+      setRouteLoading(false);
+      return;
+    }
+
+    const assignedDriverLocation =
+      ["PICKED_UP", "EN_ROUTE"].includes(focusedOrder.status) &&
+      focusedOrder.assignment?.driver_id
+        ? driverLocations.find(
+            (location) => location.driverId === focusedOrder.assignment?.driver_id,
+          )
+        : null;
+    const start: [number, number] = assignedDriverLocation
+      ? [assignedDriverLocation.lng, assignedDriverLocation.lat]
+      : [
+          parseFloat(focusedOrder.pickup_lng),
+          parseFloat(focusedOrder.pickup_lat),
+        ];
+    const end: [number, number] = [
+      parseFloat(focusedOrder.delivery_lng),
+      parseFloat(focusedOrder.delivery_lat),
+    ];
+    setSelectedRouteCoordinates(null);
+    setRouteLoading(true);
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 2200);
+
+    fetchDrivingRoute(start, end, controller.signal)
+      .then((coordinates) => {
+        if (cancelled) return;
+        setSelectedRouteCoordinates(coordinates);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (timedOut) {
+          setSelectedRouteCoordinates(buildCurvedRoute(start, end));
+          return;
+        }
+        setSelectedRouteCoordinates(buildCurvedRoute(start, end));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        window.clearTimeout(timeoutId);
+        setRouteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [focusedOrder, driverLocations]);
 
   // Combine markers based on layer filter
   const mapMarkers = useMemo(() => {
@@ -221,8 +285,14 @@ export default function MapOverviewPage() {
   // Filter routes by layer
   const mapRoutes = useMemo(() => {
     if (layer === "drivers") return [];
+    if (focusedOrder) {
+      if (!selectedRouteCoordinates || selectedRouteCoordinates.length < 2) {
+        return [];
+      }
+      return orderRoutes.filter((route) => route.id === `route-${focusedOrder.id}`);
+    }
     return orderRoutes;
-  }, [layer, orderRoutes]);
+  }, [layer, orderRoutes, focusedOrder]);
 
   // Compute bounds from all order + driver coordinates to auto-fit the map
   const mapBounds = useMemo(():
@@ -303,6 +373,13 @@ export default function MapOverviewPage() {
             onMarkerClick={handleMarkerClick}
           />
         </div>
+
+        {routeLoading && focusedOrder && (
+          <div className="absolute top-4 right-72 z-10 rounded-full bg-popover/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg border border-border flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Calculating route...
+          </div>
+        )}
 
         {/* Top-left Stats overlay */}
         <div className="absolute top-4 left-4 z-10 space-y-2">

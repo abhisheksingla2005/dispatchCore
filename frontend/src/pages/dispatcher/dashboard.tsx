@@ -10,6 +10,8 @@ import type { Shipment, ShipmentStatus } from "@/types/dispatcher/dashboard";
 import MapView from "@/components/map/MapView";
 import type { MapMarker, MapRoute } from "@/components/map/MapView";
 import { get } from "@/lib/api";
+import { fetchDrivingRoute } from "@/lib/directions";
+import { buildCurvedRoute } from "@/lib/map-routes";
 import {
   Search,
   MessageSquare,
@@ -156,6 +158,10 @@ export default function DashboardPage() {
     recordedAt: string;
   }
   const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([]);
+  const [selectedRouteCoordinates, setSelectedRouteCoordinates] = useState<
+    [number, number][] | null
+  >(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   useEffect(() => {
     async function fetchLocs() {
@@ -170,33 +176,6 @@ export default function DashboardPage() {
     const interval = setInterval(fetchLocs, 15000);
     return () => clearInterval(interval);
   }, []);
-
-  /* ─── Curved line helper ─── */
-  function curvedLine(
-    start: [number, number],
-    end: [number, number],
-    segments = 40,
-  ): [number, number][] {
-    const midLng = (start[0] + end[0]) / 2;
-    const midLat = (start[1] + end[1]) / 2;
-    const dx = end[0] - start[0];
-    const dy = end[1] - start[1];
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist === 0) return [start, end];
-    const offset = dist * 0.2;
-    const ctrlLng = midLng + (-dy / dist) * offset;
-    const ctrlLat = midLat + (dx / dist) * offset;
-    const pts: [number, number][] = [];
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      const inv = 1 - t;
-      pts.push([
-        inv * inv * start[0] + 2 * inv * t * ctrlLng + t * t * end[0],
-        inv * inv * start[1] + 2 * inv * t * ctrlLat + t * t * end[1],
-      ]);
-    }
-    return pts;
-  }
 
   /* ─── Map markers / route / bounds for selected shipment ─── */
   const selectedMapMarkers = useMemo((): MapMarker[] => {
@@ -253,32 +232,92 @@ export default function DashboardPage() {
     )
       return [];
 
-    const start: [number, number] = [
-      selectedShipment.pickupLng,
-      selectedShipment.pickupLat,
-    ];
-    const end: [number, number] = [
-      selectedShipment.deliveryLng,
-      selectedShipment.deliveryLat,
-    ];
-
     const statusColor =
       selectedShipment._backendStatus === "EN_ROUTE" ||
       selectedShipment._backendStatus === "PICKED_UP"
         ? "#2563eb"
         : selectedShipment._backendStatus === "ASSIGNED"
-          ? "#f59e0b"
+          ? "#2563eb"
           : "#6b7280";
+
+    if (!selectedRouteCoordinates || selectedRouteCoordinates.length < 2) {
+      return [];
+    }
 
     return [
       {
         id: "selected-route",
-        coordinates: curvedLine(start, end),
+        coordinates: selectedRouteCoordinates,
         color: statusColor,
         highlighted: true,
       },
     ];
-  }, [selectedShipment]);
+  }, [selectedShipment, selectedRouteCoordinates, driverLocations]);
+
+  useEffect(() => {
+    if (
+      !selectedShipment?.pickupLat ||
+      !selectedShipment?.pickupLng ||
+      !selectedShipment?.deliveryLat ||
+      !selectedShipment?.deliveryLng
+    ) {
+      setSelectedRouteCoordinates(null);
+      setRouteLoading(false);
+      return;
+    }
+
+    const assignedDriverLocation =
+      selectedShipment._backendStatus &&
+      ["PICKED_UP", "EN_ROUTE"].includes(selectedShipment._backendStatus) &&
+      selectedShipment._assignedDriverId
+        ? driverLocations.find(
+            (location) => location.driverId === selectedShipment._assignedDriverId,
+          )
+        : null;
+
+    const start: [number, number] = assignedDriverLocation
+      ? [assignedDriverLocation.lng, assignedDriverLocation.lat]
+      : [selectedShipment.pickupLng, selectedShipment.pickupLat];
+    const end: [number, number] = [
+      selectedShipment.deliveryLng,
+      selectedShipment.deliveryLat,
+    ];
+    setSelectedRouteCoordinates(null);
+    setRouteLoading(true);
+
+    const controller = new AbortController();
+    let cancelled = false;
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 2200);
+
+    fetchDrivingRoute(start, end, controller.signal)
+      .then((coordinates) => {
+        if (cancelled) return;
+        setSelectedRouteCoordinates(coordinates);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        if (timedOut) {
+          setSelectedRouteCoordinates(buildCurvedRoute(start, end));
+          return;
+        }
+        setSelectedRouteCoordinates(buildCurvedRoute(start, end));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        window.clearTimeout(timeoutId);
+        setRouteLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [selectedShipment, driverLocations]);
 
   const selectedMapBounds = useMemo(():
     | [[number, number], [number, number]]
@@ -453,6 +492,12 @@ export default function DashboardPage() {
                 routes={selectedMapRoute}
               />
 
+              {routeLoading && selectedShipment && (
+                <div className="absolute top-4 right-4 z-10 rounded-full bg-popover/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg border border-border">
+                  Calculating route...
+                </div>
+              )}
+
               {/* Shipment detail popup */}
               {selectedShipment && (
                 <div className="absolute bottom-4 left-4 right-4 bg-popover rounded-3xl p-4 shadow-xl z-10">
@@ -572,10 +617,7 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase">
-                      <input
-                        type="checkbox"
-                        className="rounded border-border accent-primary h-4 w-4 cursor-pointer bg-white dark:bg-card border appearance-none checked:appearance-auto"
-                      />
+                      #
                     </th>
                     <th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase">
                       Tracking number
@@ -601,7 +643,9 @@ export default function DashboardPage() {
                     <th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase">
                       Status
                     </th>
-                    <th className="p-4"></th>
+                    <th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -624,16 +668,13 @@ export default function DashboardPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredShipments.map((s) => (
+                    filteredShipments.map((s, index) => (
                       <tr
                         key={s.id}
                         className="border-b border-border hover:bg-muted transition-colors"
                       >
-                        <td className="p-4">
-                          <input
-                            type="checkbox"
-                            className="rounded border-border accent-primary h-4 w-4 cursor-pointer bg-white dark:bg-card border appearance-none checked:appearance-auto"
-                          />
+                        <td className="p-4 text-sm font-medium text-muted-foreground">
+                          {index + 1}
                         </td>
                         <td className="p-4">
                           <span className="text-sm font-semibold text-foreground">
@@ -674,7 +715,7 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="p-4">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             {s.status === "Pending" && (
                               <button
                                 onClick={() => {
@@ -698,13 +739,16 @@ export default function DashboardPage() {
                                     .catch(() => {});
                                 }}
                                 title="Assign to driver"
-                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-500 hover:text-blue-600 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-full border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-900/40 dark:hover:bg-blue-900/20"
                               >
-                                <UserPlus className="h-3.5 w-3.5" />
+                                <UserPlus className="h-3 w-3" />
+                                Assign
                               </button>
                             )}
                             {/* Chat with driver (when assigned) */}
-                            {s.status !== "Pending" && s._backendId && (
+                            {s.status !== "Pending" &&
+                              s.status !== "Delivered" &&
+                              s._backendId && (
                               <button
                                 onClick={() =>
                                   navigate(
@@ -712,13 +756,14 @@ export default function DashboardPage() {
                                   )
                                 }
                                 title="Chat with driver"
-                                className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 hover:text-emerald-600 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-full border border-emerald-200 px-2.5 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50 dark:border-emerald-900/40 dark:hover:bg-emerald-900/20"
                               >
-                                <Truck className="h-3.5 w-3.5" />
+                                <Truck className="h-3 w-3" />
+                                Driver
                               </button>
                             )}
                             {/* Chat with recipient */}
-                            {s._backendId && (
+                            {s.status !== "Delivered" && s._backendId && (
                               <button
                                 onClick={() =>
                                   navigate(
@@ -726,10 +771,16 @@ export default function DashboardPage() {
                                   )
                                 }
                                 title="Chat with recipient"
-                                className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-500 hover:text-purple-600 transition-colors"
+                                className="inline-flex items-center gap-1 rounded-full border border-purple-200 px-2.5 py-1 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50 dark:border-purple-900/40 dark:hover:bg-purple-900/20"
                               >
-                                <MessageSquare className="h-3.5 w-3.5" />
+                                <MessageSquare className="h-3 w-3" />
+                                Recipient
                               </button>
+                            )}
+                            {s.status === "Delivered" && (
+                              <span className="text-xs font-medium text-muted-foreground">
+                                Completed
+                              </span>
                             )}
                           </div>
                         </td>

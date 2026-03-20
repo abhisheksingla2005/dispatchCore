@@ -149,10 +149,18 @@ export default function ChatPanel({
           (convo) => conversationKey(convo.orderId, convo.channel) === activeKey,
         );
 
-      if (!hasActiveConversation && convos.length > 0) {
+      if (
+        !hasActiveConversation &&
+        convos.length > 0 &&
+        (!initialKey || activeKey !== initialKey)
+      ) {
         const first = convos[0];
         setActiveKey(conversationKey(first.orderId, first.channel));
-      } else if (!hasActiveConversation && convos.length === 0) {
+      } else if (
+        !hasActiveConversation &&
+        convos.length === 0 &&
+        (!initialKey || activeKey !== initialKey)
+      ) {
         setActiveKey(null);
       }
     } catch (err) {

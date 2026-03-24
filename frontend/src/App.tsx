@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useAnimatedFavicon } from "./hooks/app/useAnimatedFavicon";
 import ScrollToTop from "./components/layout/scroll-to-top";
+import { LoadingScreen } from "./components/ui/loading-screen";
 import { publicRoutes } from "./routes/public";
 import { dispatcherRoutes } from "./routes/dispatcher";
 import { driverRoutes } from "./routes/driver";
@@ -37,6 +38,7 @@ function App() {
   useAnimatedFavicon();
   return (
     <Router>
+      <LoadingScreen />
       <ScrollToTop />
       <AnimatedRoutes />
     </Router>

@@ -1,10 +1,15 @@
-import { useRef, useEffect, useState } from "react";
-import { motion, useInView, useScroll, useTransform } from "motion/react";
+import { useRef, useEffect, useState, useMemo, lazy, Suspense } from "react";
+import { motion, useInView, useScroll, useTransform, AnimatePresence } from "motion/react";
 import { useAutoTheme } from "@/hooks/app/useAutoTheme";
 import { Navbar } from "@/components/ui/navbar";
 import { Footer } from "@/components/ui/footer";
-import { WorldMap } from "@/components/ui/world-map";
 import { Link } from "react-router-dom";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+
+/* Lazy-load the heavy COBE globe (WebGL) — only fetched when CTA scrolls into view */
+const GlobeInteractive = lazy(() =>
+  import("@/components/ui/cobe-globe-interactive").then((m) => ({ default: m.GlobeInteractive }))
+);
 import {
   Github,
   Twitter,
@@ -17,28 +22,24 @@ import {
 } from "lucide-react";
 
 /* ─── Smooth scroll on mount ─── */
-function useSmoothScroll() {
-  useEffect(() => {
-    document.documentElement.style.scrollBehavior = "smooth";
-    return () => {
-      document.documentElement.style.scrollBehavior = "";
-    };
-  }, []);
-}
+// Removed: scroll-behavior: smooth on the document root conflicts with
+// Framer Motion's useScroll / useTransform, causing visible jitter.
 
 /* ─── Animation Variants ─── */
 type Direction = "up" | "down" | "left" | "right" | "scale";
 
 const directionMap: Record<
   Direction,
-  { opacity: number; x?: number; y?: number; scale?: number }
+  { opacity: number; x?: number; y?: number; scale?: number; filter?: string }
 > = {
-  up: { opacity: 0, y: 48 },
-  down: { opacity: 0, y: -48 },
-  left: { opacity: 0, x: -60 },
-  right: { opacity: 0, x: 60 },
-  scale: { opacity: 0, scale: 0.92 },
+  up: { opacity: 0, y: 40, filter: "blur(6px)" },
+  down: { opacity: 0, y: -40, filter: "blur(6px)" },
+  left: { opacity: 0, x: -50, filter: "blur(8px)" },
+  right: { opacity: 0, x: 50, filter: "blur(8px)" },
+  scale: { opacity: 0, scale: 0.88, filter: "blur(10px)" },
 };
+
+const revealTarget = { opacity: 1, x: 0, y: 0, scale: 1, filter: "blur(0px)" };
 
 /* ─── Reusable: Section Reveal ─── */
 function Reveal({
@@ -53,26 +54,67 @@ function Reveal({
   direction?: Direction;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const inView = useInView(ref, { once: true, margin: "-80px" });
   const initial = directionMap[direction];
   return (
     <motion.div
       ref={ref}
       initial={initial}
-      animate={inView ? { opacity: 1, x: 0, y: 0, scale: 1 } : {}}
-      transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+      animate={inView ? revealTarget : {}}
+      transition={{
+        duration: 0.9,
+        delay,
+        ease: [0.16, 1, 0.3, 1],
+        filter: { duration: 0.6 },
+      }}
       className={className}
+      style={{ willChange: "transform, opacity, filter" }}
     >
       {children}
     </motion.div>
   );
 }
 
+/* ─── Word-by-Word Text Reveal ─── */
+function WordReveal({
+  text,
+  className = "",
+  delayStart = 0.3,
+}: {
+  text: string;
+  className?: string;
+  delayStart?: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const words = useMemo(() => text.split(" "), [text]);
+  return (
+    <span ref={ref} className={className}>
+      {words.map((word, i) => (
+        <motion.span
+          key={`${word}-${i}`}
+          initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+          animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+          transition={{
+            duration: 0.6,
+            delay: delayStart + i * 0.08,
+            ease: [0.16, 1, 0.3, 1],
+          }}
+          className="inline-block mr-[0.28em]"
+          style={{ willChange: "transform, opacity, filter" }}
+        >
+          {word}
+        </motion.span>
+      ))}
+    </span>
+  );
+}
+
 /* ─── Parallax Image ─── */
-// Generate a noise texture once for all images
+// Generate a noise texture once — small canvas keeps the data-URL tiny
 const noiseDataUrl = (() => {
   if (typeof document === "undefined") return "";
-  const size = 150;
+  const size = 32;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -84,7 +126,7 @@ const noiseDataUrl = (() => {
     imageData.data[i] = Math.floor(234 * v);     // R — #ea
     imageData.data[i + 1] = Math.floor(88 * v);   // G — #58
     imageData.data[i + 2] = Math.floor(12 * v);   // B — #0c
-    imageData.data[i + 3] = 45; // subtle alpha
+    imageData.data[i + 3] = 25;
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL("image/png");
@@ -105,9 +147,9 @@ function ParallaxImage({
     target: ref,
     offset: ["start end", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], ["-8%", "8%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["-15%", "15%"]);
   return (
-    <div ref={ref} className={`overflow-hidden relative ${className}`}>
+    <div ref={ref} className={`overflow-hidden relative ${className}`} style={{ willChange: "transform", transform: "translateZ(0)" }}>
       {error ? (
         /* Accent placeholder when image fails to load */
         <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center min-h-[200px]">
@@ -124,9 +166,10 @@ function ParallaxImage({
         <motion.img
           src={src}
           alt={alt}
-          style={{ y }}
+          style={{ y, willChange: "transform" }}
           className="w-full h-[116%] object-cover"
           onError={() => setError(true)}
+          loading="lazy"
         />
       )}
       {/* Warm tint + grain overlay */}
@@ -148,51 +191,157 @@ function ParallaxImage({
 
 /* ─── 1. Hero Section ─── */
 function HeroSection() {
-  return (
-    <section className="pt-32 pb-0 px-6 lg:px-16">
-      <div className="max-w-7xl mx-auto">
-        <Reveal>
-          <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight text-foreground leading-[1.05]">
-            Dispatch everything.
-          </h1>
-        </Reveal>
+  const heroRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(heroRef, { once: true });
+  const [videoReady, setVideoReady] = useState(false);
 
-        {/* Hero Image */}
-        <Reveal delay={0.15} direction="scale">
-          <div className="mt-10 relative overflow-hidden rounded-[30px] bg-primary/10">
-            <div className="relative aspect-[16/7] flex items-center justify-center overflow-hidden">
-              <WorldMap
-                lineColor="var(--primary)"
-                theme="light"
-                dots={[
-                  // North America
-                  { start: { lat: 40.7128, lng: -74.006 }, end: { lat: 34.0522, lng: -118.2437 } },
-                  { start: { lat: 41.8781, lng: -87.6298 }, end: { lat: 29.7604, lng: -95.3698 } },
-                  { start: { lat: 49.2827, lng: -123.1207 }, end: { lat: 45.5017, lng: -73.5673 } },
-                  // Europe
-                  { start: { lat: 51.5074, lng: -0.1278 }, end: { lat: 48.8566, lng: 2.3522 } },
-                  { start: { lat: 52.52, lng: 13.405 }, end: { lat: 41.9028, lng: 12.4964 } },
-                  { start: { lat: 59.3293, lng: 18.0686 }, end: { lat: 40.4168, lng: -3.7038 } },
-                  // Asia
-                  { start: { lat: 35.6762, lng: 139.6503 }, end: { lat: 1.3521, lng: 103.8198 } },
-                  { start: { lat: 28.6139, lng: 77.209 }, end: { lat: 25.2048, lng: 55.2708 } },
-                  { start: { lat: 19.076, lng: 72.8777 }, end: { lat: 13.0827, lng: 80.2707 } },
-                  { start: { lat: 28.6139, lng: 77.209 }, end: { lat: 22.5726, lng: 88.3639 } },
-                  { start: { lat: 12.9716, lng: 77.5946 }, end: { lat: 19.076, lng: 72.8777 } },
-                  { start: { lat: 37.5665, lng: 126.978 }, end: { lat: 22.3193, lng: 114.1694 } },
-                  { start: { lat: 13.7563, lng: 100.5018 }, end: { lat: 31.2304, lng: 121.4737 } },
-                  // Cross-continental
-                  { start: { lat: 51.5074, lng: -0.1278 }, end: { lat: 40.7128, lng: -74.006 } },
-                  { start: { lat: 25.2048, lng: 55.2708 }, end: { lat: -1.2921, lng: 36.8219 } },
-                  // South America & Oceania
-                  { start: { lat: -23.5505, lng: -46.6333 }, end: { lat: 19.4326, lng: -99.1332 } },
-                  { start: { lat: -33.8688, lng: 151.2093 }, end: { lat: -36.8485, lng: 174.7633 } },
-                ]}
-              />
+  return (
+    <section className="relative min-h-screen overflow-hidden">
+      {/* Lottie placeholder — visible while video loads */}
+      <AnimatePresence>
+        {!videoReady && (
+          <motion.div
+            className="absolute inset-0 z-[1] flex items-center justify-center"
+            style={{
+              background: "linear-gradient(135deg, hsl(20 10% 8%) 0%, hsl(20 8% 14%) 40%, hsl(20 6% 10%) 100%)",
+            }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <DotLottieReact
+              src="/Untitled file.lottie"
+              loop
+              autoplay
+              className="w-48 h-48 md:w-64 md:h-64 opacity-60"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.video
+        src="/hero.mp4"
+        className="absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onCanPlay={() => setVideoReady(true)}
+        initial={{ scale: 1.12, opacity: 0 }}
+        animate={videoReady ? { scale: 1, opacity: 1 } : { scale: 1.12, opacity: 0 }}
+        transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
+      />
+
+      {/* Light theme overlays — lighter so video shows through */}
+      <div className="absolute inset-0 dark:hidden bg-[linear-gradient(180deg,rgba(10,8,6,0.10)_0%,rgba(10,8,6,0.22)_32%,rgba(10,8,6,0.45)_100%)]" />
+      <div
+        className="absolute inset-0 opacity-20 dark:hidden"
+        style={{
+          backgroundImage: `url(${noiseDataUrl})`,
+          backgroundRepeat: "repeat",
+        }}
+      />
+      <div className="absolute inset-0 dark:hidden bg-[linear-gradient(90deg,rgba(8,7,5,0.20)_0%,rgba(8,7,5,0.06)_38%,rgba(8,7,5,0.20)_100%)]" />
+
+      {/* Dark theme overlays — heavier for readability */}
+      <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(180deg,rgba(10,8,6,0.20)_0%,rgba(10,8,6,0.35)_32%,rgba(10,8,6,0.60)_100%)]" />
+      <div
+        className="absolute inset-0 opacity-30 hidden dark:block"
+        style={{
+          backgroundImage: `url(${noiseDataUrl})`,
+          backgroundRepeat: "repeat",
+        }}
+      />
+      <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(90deg,rgba(8,7,5,0.35)_0%,rgba(8,7,5,0.12)_38%,rgba(8,7,5,0.35)_100%)]" />
+      <div ref={heroRef} className="relative z-10 flex min-h-screen items-end px-6 pb-16 pt-32 lg:px-16 lg:pb-20">
+        <div className="mx-auto flex w-full max-w-7xl items-end">
+          <div className="max-w-3xl p-2 md:p-4">
+            {/* Subtitle */}
+            <motion.p
+              initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+              animate={inView ? { opacity: 0.7, y: 0, filter: "blur(0px)" } : {}}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-white"
+            >
+              Real-time Delivery Control
+            </motion.p>
+
+            {/* Word-by-word heading */}
+            <h1 className="text-5xl font-bold leading-[0.98] tracking-tight text-white md:text-7xl lg:text-[5.5rem]">
+              <WordReveal text="Dispatch everything." delayStart={0.25} />
+            </h1>
+
+            {/* Description with blur-in */}
+            <motion.p
+              initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+              animate={inView ? { opacity: 0.76, y: 0, filter: "blur(0px)" } : {}}
+              transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-5 max-w-2xl text-sm leading-relaxed text-white md:text-base"
+            >
+              Run every shipment, route, and driver from one live command
+              surface built for fast-moving delivery teams.
+            </motion.p>
+
+            {/* Staggered buttons */}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+                transition={{ duration: 0.6, delay: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_-6px] hover:shadow-primary/40 hover:-translate-y-0.5"
+                >
+                  Start Dispatching
+                </Link>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+                transition={{ duration: 0.6, delay: 1.05, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <Link
+                  to="/docs"
+                  className="relative inline-flex items-center rounded-full border border-white/18 px-6 py-3 text-sm font-medium text-white transition-all duration-300 hover:border-white/30 hover:-translate-y-0.5 overflow-hidden"
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    backdropFilter: "blur(12px) saturate(130%)",
+                    WebkitBackdropFilter: "blur(12px) saturate(130%)",
+                  }}
+                >
+                  {/* Glass grain */}
+                  <span
+                    className="absolute inset-0 pointer-events-none rounded-full"
+                    style={{
+                      backgroundImage: `url(${noiseDataUrl})`,
+                      backgroundRepeat: "repeat",
+                      opacity: 0.35,
+                      mixBlendMode: "soft-light",
+                    }}
+                  />
+                  {/* Top-edge highlight */}
+                  <span
+                    className="absolute inset-x-0 top-0 h-[1px] pointer-events-none"
+                    style={{
+                      background: "linear-gradient(90deg, transparent 15%, rgba(255,255,255,0.15) 40%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.15) 60%, transparent 85%)",
+                    }}
+                  />
+                  <span className="relative z-10">Explore the Platform</span>
+                </Link>
+              </motion.div>
             </div>
           </div>
-        </Reveal>
+        </div>
       </div>
+
+      {/* Bottom fade — blends video into the next section */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-56 z-20 pointer-events-none"
+        style={{
+          background: "linear-gradient(to bottom, transparent 0%, hsl(var(--background) / 0.5) 40%, hsl(var(--background) / 0.85) 70%, hsl(var(--background)) 100%)",
+        }}
+      />
     </section>
   );
 }
@@ -201,15 +350,22 @@ function HeroSection() {
 function TrustedBy() {
   const logos = ["SwiftHaul", "NovaCargo", "Parcelion", "FleetVox", "Routesmith", "Cargonex"];
   return (
-    <section className="py-16 px-6 lg:px-16">
-      <div className="max-w-7xl mx-auto">
+    <section className="relative px-6 pb-16 pt-12 lg:px-16">
+      {/* Top gradient that blends into the hero's bottom fade */}
+      <div
+        className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+        style={{
+          background: "linear-gradient(to bottom, hsl(var(--background)) 0%, transparent 100%)",
+        }}
+      />
+      <div className="max-w-7xl mx-auto relative">
         <Reveal>
           <p className="text-sm text-muted-foreground mb-8">Trusted by:</p>
         </Reveal>
         <div className="flex items-center flex-wrap gap-10">
           {logos.map((name, i) => (
-            <Reveal key={name} delay={i * 0.07} direction="up">
-              <span className="text-xl font-semibold text-foreground/60 tracking-wide">
+            <Reveal key={name} delay={i * 0.09} direction="right">
+              <span className="text-xl font-semibold text-foreground/60 tracking-wide transition-colors duration-300 hover:text-foreground/90">
                 {name}
               </span>
             </Reveal>
@@ -228,20 +384,19 @@ function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
 
   useEffect(() => {
     if (!inView) return;
-    const duration = 1800;
-    const steps = 60;
-    const increment = target / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= target) {
-        setCount(target);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
+    const duration = 2200;
+    const startTime = performance.now();
+    let raf: number;
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // easeOutExpo for a satisfying deceleration
+      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(target % 1 !== 0 ? parseFloat((eased * target).toFixed(1)) : Math.floor(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [inView, target]);
 
   const display = target >= 1000
@@ -343,9 +498,9 @@ function BenefitsSection() {
           {/* Right: icon lockups */}
           <div className="space-y-0">
             {benefits.map((b, i) => (
-              <Reveal key={b.title} delay={i * 0.08} direction="right">
-                <div className="py-6 border-t border-border flex gap-5">
-                  <div className="shrink-0 h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Reveal key={b.title} delay={i * 0.12} direction="right">
+                <div className="group py-6 border-t border-border flex gap-5 transition-all duration-300 hover:pl-2">
+                  <div className="shrink-0 h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary transition-all duration-300 group-hover:bg-primary/20 group-hover:scale-110">
                     <b.icon className="h-5 w-5" />
                   </div>
                   <div>
@@ -365,7 +520,7 @@ function BenefitsSection() {
         {/* Benefits hero image */}
         <Reveal delay={0.2} direction="scale">
           <ParallaxImage
-            src="https://images.unsplash.com/photo-1695222833131-54ee679ae8e5?q=80&w=2041&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            src="https://images.unsplash.com/photo-1695222833131-54ee679ae8e5?q=75&w=800&auto=format&fit=crop"
             alt="Logistics dashboard"
             className="mt-16 rounded-[30px] aspect-[16/9]"
           />
@@ -430,7 +585,7 @@ function FeaturesCarousel() {
 
               <Link
                 to="/Docs"
-                className="inline-flex items-center gap-2 mt-8 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center gap-2 mt-8 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_-6px] hover:shadow-primary/40 hover:-translate-y-0.5"
               >
                 Discover More
               </Link>
@@ -440,7 +595,7 @@ function FeaturesCarousel() {
           {/* Right image */}
           <Reveal delay={0.15} direction="right">
             <ParallaxImage
-              src="https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2072&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              src="https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=75&w=800&auto=format&fit=crop"
               alt="Fleet tracking"
               className="rounded-[30px] aspect-[4/5] lg:aspect-auto lg:h-full"
             />
@@ -504,7 +659,7 @@ function SpecsSection() {
               </p>
               <Link
                 to="/signup"
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_-6px] hover:shadow-primary/40 hover:-translate-y-0.5"
               >
                 Get Started
               </Link>
@@ -549,7 +704,7 @@ const testimonials = [
     role: "Head of Operations",
     company: "NovaCargo",
     image:
-      "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=1045&auto=format&fit=crop&ixlib=rb-4.1.0",
+      "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=75&w=600&auto=format&fit=crop",
   },
   {
     quote:
@@ -558,7 +713,7 @@ const testimonials = [
     role: "CEO & Founder",
     company: "FleetVox",
     image:
-      "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=1008&auto=format&fit=crop&ixlib=rb-4.1.0",
+      "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=75&w=600&auto=format&fit=crop",
   },
   {
     quote:
@@ -567,7 +722,7 @@ const testimonials = [
     role: "VP of Logistics",
     company: "SwiftHaul",
     image:
-      "https://images.unsplash.com/photo-1745176593885-c1d466a6dff5?q=80&w=1402&auto=format&fit=crop&ixlib=rb-4.1.0",
+      "https://images.unsplash.com/photo-1745176593885-c1d466a6dff5?q=75&w=600&auto=format&fit=crop",
   },
 ];
 
@@ -589,19 +744,25 @@ function TestimonialSection() {
         <div className="grid lg:grid-cols-5 gap-12 items-center">
           {/* Image */}
           {/* Image — changes per testimonial */}
-          <motion.div
-            key={`img-${active}`}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="lg:col-span-2"
-          >
-            <ParallaxImage
-              src={t.image}
-              alt={t.company}
-              className="rounded-[30px] aspect-[3/4] max-w-md mx-auto"
-            />
-          </motion.div>
+          <div className="lg:col-span-2 relative overflow-hidden rounded-[30px] aspect-[3/4] w-full max-w-md mx-auto">
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={`img-${active}`}
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 30, mass: 1 }}
+                className="absolute inset-0 z-[1]"
+                style={{ willChange: "transform", backfaceVisibility: "hidden" }}
+              >
+                <ParallaxImage
+                  src={t.image}
+                  alt={t.company}
+                  className="rounded-[30px] aspect-[3/4] w-full h-full"
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
 
           {/* Quote carousel */}
           <div className="lg:col-span-3">
@@ -609,13 +770,16 @@ function TestimonialSection() {
               What people say
             </p>
 
-            <div className="relative min-h-[220px]">
+            <div className="relative min-h-[280px] overflow-hidden">
+              <AnimatePresence initial={false}>
               <motion.div
                 key={active}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.4 }}
+                initial={{ x: 80, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -50, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 30, mass: 1 }}
+                className="absolute inset-0"
+                style={{ willChange: "transform" }}
               >
                 {/* Stars */}
                 <div className="flex gap-1 mb-5">
@@ -645,6 +809,7 @@ function TestimonialSection() {
                   </footer>
                 </blockquote>
               </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Dot indicators */}
@@ -703,7 +868,7 @@ function HowItWorksSection() {
           <Reveal delay={0.1}>
             <Link
               to="/Docs"
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shrink-0"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-full transition-all duration-300 hover:bg-primary/90 hover:shadow-[0_8px_30px_-6px] hover:shadow-primary/40 hover:-translate-y-0.5 shrink-0"
             >
               Discover More
             </Link>
@@ -712,9 +877,17 @@ function HowItWorksSection() {
 
         <div className="grid md:grid-cols-3 gap-0">
           {howItWorksSteps.map((step, i) => (
-            <Reveal key={step.num} delay={i * 0.1}>
-              <div className="pt-2 pb-8 pr-8">
-                <span className="text-5xl md:text-6xl font-bold text-primary tracking-tight block mb-6">
+            <Reveal key={step.num} delay={i * 0.18}>
+              <div className="group pt-2 pb-8 pr-8 relative">
+                {/* Animated accent line */}
+                <motion.div
+                  className="absolute top-0 left-0 h-[2px] bg-primary"
+                  initial={{ width: 0 }}
+                  whileInView={{ width: "3rem" }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.8, delay: 0.2 + i * 0.18, ease: [0.16, 1, 0.3, 1] }}
+                />
+                <span className="text-5xl md:text-6xl font-bold text-primary tracking-tight block mb-6 mt-4 transition-transform duration-300 group-hover:translate-x-1">
                   {step.num}
                 </span>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -739,7 +912,7 @@ function FullWidthImage() {
       <div className="max-w-7xl mx-auto">
         <Reveal direction="scale">
           <ParallaxImage
-            src="https://images.unsplash.com/photo-1761474909259-923263be648a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            src="https://images.unsplash.com/photo-1761474909259-923263be648a?q=75&w=800&auto=format&fit=crop"
             alt="Delivery fleet on the road"
             className="rounded-[30px] aspect-[16/9]"
           />
@@ -754,7 +927,7 @@ function CenteredCTA() {
   return (
     <section className="py-24 px-6 lg:px-16">
       <div className="max-w-7xl mx-auto">
-        <div className="relative overflow-hidden rounded-[30px] border border-primary/15 py-20 px-8">
+        <div className="relative overflow-hidden rounded-[30px] border border-primary/15 py-16 px-8 md:px-16">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-tl from-primary via-primary/[0.85] to-primary/[0.55]" />
           {/* Grain overlay */}
@@ -762,27 +935,47 @@ function CenteredCTA() {
             className="absolute inset-0 pointer-events-none"
             style={{ backgroundImage: `url(${noiseDataUrl})`, backgroundRepeat: "repeat" }}
           />
-          <div className="relative text-center max-w-2xl mx-auto">
-            <Reveal>
-              <h2 className="text-3xl md:text-5xl font-bold text-foreground tracking-tight mb-4">
-                Connect with us
-              </h2>
-            </Reveal>
-            <Reveal delay={0.08}>
-              <p className="text-foreground leading-relaxed mb-8">
-                Schedule a quick call to learn how dispatchCore can transform your
-                delivery operations into a competitive advantage.
-              </p>
-            </Reveal>
-            <Reveal delay={0.15}>
-              <Link
-                to="/contact"
-                className="group inline-flex items-center gap-2 px-8 py-4 text-sm font-medium bg-foreground text-background rounded-full hover:bg-foreground/90 transition-colors"
-              >
-                Learn More
-                <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-              </Link>
-            </Reveal>
+          <div className="relative">
+            {/* Left — text content */}
+            <div className="relative z-10 max-w-lg py-4">
+              <Reveal>
+                <h2 className="text-3xl md:text-5xl font-bold text-foreground tracking-tight mb-4">
+                  Connect with us
+                </h2>
+              </Reveal>
+              <Reveal delay={0.08}>
+                <p className="text-foreground/90 leading-relaxed mb-8">
+                  Schedule a quick call to learn how dispatchCore can transform your
+                  delivery operations into a competitive advantage.
+                </p>
+              </Reveal>
+              <Reveal delay={0.15}>
+                <Link
+                  to="/contact"
+                  className="group inline-flex items-center gap-2 px-8 py-4 text-sm font-medium bg-foreground text-background rounded-full hover:bg-foreground/90 transition-colors"
+                >
+                  Learn More
+                  <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </Link>
+              </Reveal>
+            </div>
+
+            {/* Right — interactive globe, partially clipped */}
+            <div className="absolute -bottom-72 -right-16 md:-right-8 w-[380px] md:w-[480px] lg:w-[560px] pointer-events-auto">
+              <Suspense fallback={<div className="w-full aspect-square" />}>
+                <GlobeInteractive
+                  className="w-full"
+                  markers={[
+                    { id: "na", location: [40.71, -74.01], name: "NA", users: 2840 },
+                    { id: "eu", location: [52.52, 13.41], name: "EU", users: 1920 },
+                    { id: "asia", location: [19.08, 72.88], name: "Asia", users: 3100 },
+                    { id: "latam", location: [-23.55, -46.63], name: "LATAM", users: 890 },
+                    { id: "mena", location: [25.2, 55.27], name: "MENA", users: 730 },
+                    { id: "apac", location: [35.68, 139.65], name: "APAC", users: 1560 },
+                  ]}
+                />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>
@@ -793,7 +986,7 @@ function CenteredCTA() {
 /* ─── Landing Page ─── */
 export default function LandingPage() {
   useAutoTheme();
-  useSmoothScroll();
+  // useSmoothScroll removed — conflicts with Framer Motion scroll tracking
 
   return (
     <div className="min-h-screen bg-background text-foreground">

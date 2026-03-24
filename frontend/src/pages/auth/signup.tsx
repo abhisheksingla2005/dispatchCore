@@ -12,7 +12,6 @@ import {
   PhoneIcon,
   BuildingIcon,
   UsersIcon,
-  CheckCircleIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
   Loader2Icon,
@@ -275,53 +274,40 @@ export function SignupPage() {
             {/* ── STEP 1: Account type + basic info ── */}
             {step === 1 && (
               <form className="space-y-5" onSubmit={handleStepOneSubmit}>
-                {/* Account type selector */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Account type selector — segmented control */}
+                <div className="relative grid grid-cols-2 rounded-full border border-border bg-card p-1">
+                  {/* Sliding pill */}
+                  <div
+                    className="absolute inset-y-1 w-[calc(50%-4px)] rounded-full border border-primary bg-primary/10 shadow-sm transition-transform duration-300 ease-in-out"
+                    style={{
+                      transform: accountType === "company" ? "translateX(4px)" : "translateX(calc(100% + 4px))",
+                    }}
+                  />
                   <button
                     type="button"
                     onClick={() => setAccountType("company")}
-                    className={`group relative flex flex-row items-start gap-2 p-4 rounded-full border transition-all duration-200 text-left ${
-                      accountType === "company"
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-foreground/20 hover:bg-muted"
-                    }`}
+                    className="relative z-[1] flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors duration-300"
                   >
                     <BuildingIcon
-                      className={`size-5 ${accountType === "company" ? "text-primary" : "text-muted-foreground"}`}
+                      className={`size-4 transition-colors duration-300 ${accountType === "company" ? "text-primary" : "text-muted-foreground"}`}
                     />
-                    <div>
-                      <p className="text-sm font-semibold">Delivery Company</p>
-                    </div>
-                    {accountType === "company" && (
-                      <CheckCircleIcon className="size-4 text-primary absolute top-4.5 right-3" />
-                    )}
+                    Delivery Company
                   </button>
                   <button
                     type="button"
                     onClick={() => setAccountType("driver")}
-                    className={`group relative flex flex-row items-start gap-2 p-4 rounded-full border transition-all duration-200 text-left ${
-                      accountType === "driver"
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-foreground/20 hover:bg-muted"
-                    }`}
+                    className="relative z-[1] flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors duration-300"
                   >
                     <UsersIcon
-                      className={`size-5 ${accountType === "driver" ? "text-primary" : "text-muted-foreground"}`}
+                      className={`size-4 transition-colors duration-300 ${accountType === "driver" ? "text-primary" : "text-muted-foreground"}`}
                     />
-                    <div>
-                      <p className="text-sm font-semibold">
-                        Independent Driver
-                      </p>
-                    </div>
-                    {accountType === "driver" && (
-                      <CheckCircleIcon className="size-4 text-primary absolute top-4.5 right-3" />
-                    )}
+                    Independent Driver
                   </button>
                 </div>
 
                 {/* Basic fields */}
                 <div className="space-y-3">
-                  {accountType === "driver" && (
+                  {accountType === "driver" ? (
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Full Name</label>
                       <div className="relative">
@@ -337,13 +323,29 @@ export function SignupPage() {
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Company Name</label>
+                      <div className="relative">
+                        <input
+                          placeholder="Your Company Inc."
+                          type="text"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="w-full rounded-full border border-border bg-card px-6 py-[18px] ps-11 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                        />
+                        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+                          <BuildingIcon className="size-4" />
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Email</label>
                     <div className="relative">
                       <input
-                        placeholder="you@company.com"
+                        placeholder={accountType === "company" ? "you@company.com" : "you@email.com"}
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -359,7 +361,7 @@ export function SignupPage() {
                     <label className="text-sm font-medium">Phone Number</label>
                     <div className="relative">
                       <input
-                        placeholder="+1 (555) 000-0000"
+                        placeholder={accountType === "company" ? "+91 98765 43210" : "+91 98765 43210"}
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -401,23 +403,6 @@ export function SignupPage() {
                   {/* Company-specific fields */}
                   {accountType === "company" && (
                     <>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">
-                          Company Name
-                        </label>
-                        <div className="relative">
-                          <input
-                            placeholder="Your Company Inc."
-                            type="text"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            className="w-full rounded-full border border-border bg-card px-6 py-[18px] ps-11 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-                          />
-                          <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
-                            <BuildingIcon className="size-4" />
-                          </div>
-                        </div>
-                      </div>
                       <div className="space-y-1">
                         <label className="text-sm font-medium">
                           Company Size
@@ -480,10 +465,25 @@ export function SignupPage() {
                         )}
                       </button>
                     </div>
-                    <div className="flex gap-1 pt-1">
-                      <div className="h-1 flex-1 rounded-full bg-primary" />
-                      <div className="h-1 flex-1 rounded-full bg-primary/40" />
-                      <div className="h-1 flex-1 rounded-full bg-border" />
+                    <div className="flex gap-1 pt-1 px-8">
+                      {(() => {
+                        let score = 0;
+                        if (password.length >= 6) score++;
+                        if (password.length >= 10) score++;
+                        if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
+                        if (/\d/.test(password)) score++;
+                        if (/[^A-Za-z0-9]/.test(password)) score++;
+
+                        const strength = password.length === 0 ? 0 : Math.min(Math.ceil(score * 3 / 5), 3);
+                        const barColors = ["bg-border", "bg-red-500", "bg-yellow-400", "bg-green-500"];
+
+                        return [1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${i <= strength ? barColors[strength] : "bg-border"}`}
+                          />
+                        ));
+                      })()}
                     </div>
                   </div>
 

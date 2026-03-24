@@ -163,7 +163,7 @@ export function AuthPage() {
                 <label className="text-sm font-medium">Email</label>
                 <div className="relative">
                   <input
-                    placeholder="you@company.com"
+                    placeholder="you@example.com"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}

@@ -190,7 +190,7 @@ export default function EmployedDriverSettingsPage() {
 
   if (loading || !settings) {
     return (
-      <div className="flex min-h-screen w-full">
+      <div className="flex flex-col lg:flex-row min-h-screen w-full">
         <EmployedDriverSidebar />
         <div className="flex flex-1 items-center justify-center">
           <LoadingPackage />

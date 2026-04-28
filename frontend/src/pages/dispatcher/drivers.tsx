@@ -141,12 +141,12 @@ export default function DriversPage() {
   );
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Header */}
-        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-foreground">

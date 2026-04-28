@@ -359,7 +359,7 @@ export default function MapOverviewPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DashboardSidebar />
       <div className="flex-1 bg-background relative overflow-hidden">
         {/* MapLibre GL Map */}

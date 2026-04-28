@@ -49,14 +49,14 @@ export default function EmployedDriverDeliveriesPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <EmployedDriverSidebar />
       <div className="flex-1 bg-background overflow-auto flex flex-col lg:flex-row">
         {/* Left — Delivery List */}
         <div
           className={`${selected ? "lg:w-[55%]" : "w-full"} border-r border-border flex flex-col`}
         >
-          <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+          <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
             <h1 className="text-xl font-bold text-foreground">
               Active Deliveries
             </h1>
@@ -156,7 +156,7 @@ export default function EmployedDriverDeliveriesPage() {
         {/* Right — Delivery Detail */}
         {selected && (
           <div className="lg:w-[45%] bg-card overflow-y-auto">
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-foreground">
                 Delivery Details
               </h2>

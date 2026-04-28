@@ -91,7 +91,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DashboardSidebar />
 
       <div className="flex-1 min-h-screen bg-background overflow-auto lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col">
@@ -99,7 +99,7 @@ export default function MarketplacePage() {
           {/* ═══ LEFT — Dispatcher's Marketplace Listings ═══ */}
           <div className="lg:w-[55%] border-r border-border flex flex-col lg:min-h-0 lg:h-full">
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h1 className="text-xl font-bold text-foreground">
@@ -274,7 +274,7 @@ export default function MarketplacePage() {
 
           {/* ═══ RIGHT — Incoming Bids from Independent Drivers ═══ */}
           <div className="lg:w-[45%] flex flex-col lg:min-h-0 lg:h-full">
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <h2 className="text-xl font-bold text-foreground">
                   {selectedOrderId

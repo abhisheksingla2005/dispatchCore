@@ -80,12 +80,12 @@ export default function SuperAdminDashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <SuperAdminSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* ── Top Bar ── */}
-        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -100,7 +100,7 @@ export default function SuperAdminDashboardPage() {
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {loading ? (
             <div className="flex items-center justify-center py-24">
               <LoadingPackage />

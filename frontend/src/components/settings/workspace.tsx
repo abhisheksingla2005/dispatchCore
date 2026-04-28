@@ -28,17 +28,41 @@ export function SettingsWorkspace({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       {sidebar}
       <div className="flex-1 bg-background overflow-auto">
-        <header className="sticky top-0 z-10 border-b border-border bg-card/95 px-6 py-4 backdrop-blur-xl">
-          <h1 className="text-xl font-bold text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+        <header className="sticky top-0 z-10 border-b border-border bg-card/95 px-4 sm:px-6 py-3 sm:py-4 backdrop-blur-xl">
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">{title}</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
         </header>
 
-        <div className="p-6 lg:p-8">
-          <div className="grid items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="xl:sticky xl:top-24">
+        <div className="p-4 sm:p-6 lg:p-8">
+          {/* Mobile: horizontal scrollable pill tabs */}
+          <div className="lg:hidden mb-6 -mx-4 px-4">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {tabs.map((tab) => {
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => onTabChange(tab.id)}
+                    className={`shrink-0 flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all ${
+                      active
+                        ? `${accentClass} border-transparent`
+                        : "border border-border text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            {/* Desktop: vertical tab sidebar */}
+            <aside className="hidden lg:block lg:sticky lg:top-24">
               <div className="rounded-3xl border border-border bg-card/80 p-3 shadow-[0_20px_60px_-45px_rgba(0,0,0,0.75)] backdrop-blur">
                 <div className="mb-3 px-3 pt-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -99,12 +123,12 @@ export function SettingsCard({
 }) {
   return (
     <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-[0_24px_80px_-52px_rgba(0,0,0,0.82)]">
-      <div className="border-b border-border/80 px-6 py-5 lg:px-8">
+      <div className="border-b border-border/80 px-4 sm:px-6 py-4 sm:py-5 lg:px-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold text-foreground">{title}</h2>
+            <h2 className="text-base sm:text-lg font-bold text-foreground">{title}</h2>
             {description && (
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
                 {description}
               </p>
             )}
@@ -112,7 +136,7 @@ export function SettingsCard({
           {actions}
         </div>
       </div>
-      <div className="px-6 py-6 lg:px-8">{children}</div>
+      <div className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8">{children}</div>
     </section>
   );
 }
@@ -152,14 +176,14 @@ export function ToggleRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-3xl border border-border bg-muted/30 px-4 py-3">
-      <div>
+      <div className="min-w-0">
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 overflow-hidden rounded-3xl transition-colors ${
+        className={`relative shrink-0 h-6 w-11 overflow-hidden rounded-3xl transition-colors ${
           checked ? activeClass : "bg-zinc-700"
         }`}
       >

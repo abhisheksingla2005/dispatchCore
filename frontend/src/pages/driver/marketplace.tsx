@@ -127,14 +127,14 @@ export default function DriverMarketplacePage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DriverSidebar />
 
-      <div className="flex-1 min-h-screen bg-background overflow-auto lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col">
+      <div className="flex-1 min-w-0 min-h-screen bg-background overflow-y-auto lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col">
         <div className="flex-1 flex flex-col lg:flex-row lg:min-h-0 lg:h-full">
           {/* ═══ LEFT — Browse Available Orders ═══ */}
           <div className="lg:w-[55%] border-r border-border flex flex-col lg:min-h-0 lg:h-full">
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-bold text-foreground">
                   Available Orders
@@ -160,7 +160,7 @@ export default function DriverMarketplacePage() {
               </div>
             </div>
 
-            <div className="dc-scrollbar flex-1 overflow-y-auto p-6 lg:min-h-0">
+            <div className="dc-scrollbar flex-1 overflow-y-auto p-4 sm:p-6 lg:min-h-0">
               {listingsLoading ? (
                 <div className="flex items-center justify-center py-20 text-gray-400">
                   <LoadingPackage />
@@ -273,7 +273,7 @@ export default function DriverMarketplacePage() {
 
           {/* ═══ RIGHT — My Bids ═══ */}
           <div className="lg:w-[45%] flex flex-col lg:min-h-0 lg:h-full">
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-foreground">
                   My Bids
@@ -284,7 +284,7 @@ export default function DriverMarketplacePage() {
               </div>
             </div>
 
-            <div className="dc-scrollbar flex-1 overflow-y-auto p-6 lg:min-h-0">
+            <div className="dc-scrollbar flex-1 overflow-y-auto p-4 sm:p-6 lg:min-h-0">
               {bidsLoading ? (
                 <div className="flex items-center justify-center py-20 text-gray-400">
                   <LoadingPackage />
@@ -406,34 +406,34 @@ export default function DriverMarketplacePage() {
         </div>
 
         {/* ═══ Bottom Stats Bar ═══ */}
-        <div className="border-t border-border bg-card px-6 py-3">
-          <div className="flex items-center justify-center gap-8 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Package className="h-4 w-4" />
+        <div className="border-t border-border bg-card px-3 sm:px-6 py-2.5 sm:py-3">
+          <div className="flex items-center justify-start sm:justify-center gap-3 sm:gap-8 text-xs sm:text-sm overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground shrink-0">
+              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Available:{" "}
               <span className="font-bold text-foreground">
                 {stats?.availableOrders ?? "—"}
               </span>
             </div>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800" />
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Gavel className="h-4 w-4" />
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800 shrink-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground shrink-0">
+              <Gavel className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               My Bids:{" "}
               <span className="font-bold text-foreground">
                 {stats?.myActiveBids ?? "—"}
               </span>
             </div>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800" />
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CheckCircle className="h-4 w-4" />
-              Won Today:{" "}
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800 shrink-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground shrink-0">
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Won:{" "}
               <span className="font-bold text-foreground">
                 {stats?.acceptedToday ?? "—"}
               </span>
             </div>
-            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800" />
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
+            <div className="h-4 w-px bg-gray-200 dark:bg-gray-800 shrink-0" />
+            <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground shrink-0">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Earnings:{" "}
               <span className="font-bold text-green-600">
                 {stats?.earnings !== undefined ? formatINR(stats.earnings) : "—"}
@@ -444,8 +444,8 @@ export default function DriverMarketplacePage() {
 
         {/* ═══ Place Bid Modal ═══ */}
         {bidModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-secondary rounded-3xl p-6 w-full max-w-md shadow-2xl border border-border">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-secondary rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl border border-border max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-foreground">
                   Place Your Bid

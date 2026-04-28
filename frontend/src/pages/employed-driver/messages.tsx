@@ -19,7 +19,7 @@ export default function EmployedDriverMessagesPage() {
   const initialChannel = searchParams.get("channel") as ChatChannel | undefined;
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex flex-col lg:flex-row h-screen bg-background">
       <EmployedDriverSidebar />
       <main className="flex-1 flex flex-col p-4 overflow-hidden">
         <ChatPanel

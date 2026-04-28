@@ -107,7 +107,7 @@ export default function SuperAdminSettingsPage() {
 
   if (loading || !settings) {
     return (
-      <div className="flex min-h-screen w-full">
+      <div className="flex flex-col lg:flex-row min-h-screen w-full">
         <SuperAdminSidebar />
         <div className="flex flex-1 items-center justify-center">
           <LoadingPackage text="Loading platform settings..." delay={650} />

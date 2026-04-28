@@ -10,30 +10,14 @@ import {
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { logout } from "@/lib/session";
-
-
+import { MobileSidebarWrapper, MobileTopBar } from "./mobile-sidebar-wrapper";
+import { useMobileSidebar } from "@/hooks/app/useMobileSidebar";
 
 const navItems = [
-  {
-    icon: LayoutDashboard,
-    label: "Dashboard",
-    href: "/employed-driver/dashboard",
-  },
-  {
-    icon: ClipboardList,
-    label: "Assigned Orders",
-    href: "/employed-driver/orders",
-  },
-  {
-    icon: Truck,
-    label: "Active Deliveries",
-    href: "/employed-driver/deliveries",
-  },
-  {
-    icon: Calendar,
-    label: "Shift Schedule",
-    href: "/employed-driver/schedule",
-  },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/employed-driver/dashboard" },
+  { icon: ClipboardList, label: "Assigned Orders", href: "/employed-driver/orders" },
+  { icon: Truck, label: "Active Deliveries", href: "/employed-driver/deliveries" },
+  { icon: Calendar, label: "Shift Schedule", href: "/employed-driver/schedule" },
   { icon: MessageSquare, label: "Messages", href: "/employed-driver/messages" },
 ];
 
@@ -41,6 +25,7 @@ export function EmployedDriverSidebar() {
   const [open, setOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const { mobileOpen, toggle, close } = useMobileSidebar();
 
   const handleLogout = async () => {
     await logout();
@@ -59,36 +44,25 @@ export function EmployedDriverSidebar() {
     .toUpperCase()
     .slice(0, 2);
 
-  return (
-    <nav
-      className={`sticky top-0 h-screen shrink-0 flex flex-col transition-all duration-300 ease-in-out ${
-        open ? "w-60" : "w-[68px]"
-      } border-border bg-card`}
-    >
-      {/* Logo */}
+  const sidebarContent = (
+    <>
       <div className="p-4">
         <Link to="/" className="flex items-center gap-2.5 overflow-hidden">
-          {open && (
-            <span className="text-base font-bold text-foreground whitespace-nowrap">
-              dispatchCore
-            </span>
-          )}
+          <span className="text-base font-bold text-foreground whitespace-nowrap">
+            dispatchCore
+          </span>
         </Link>
       </div>
 
-      {/* Role badge */}
-      {open && (
-        <div className="px-4 py-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-              Employed Driver
-            </span>
-          </div>
-          <p className="text-[10px] text-gray-400 mt-1">{companyName}</p>
+      <div className="px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+            Employed Driver
+          </span>
         </div>
-      )}
+        <p className="text-[10px] text-gray-400 mt-1">{companyName}</p>
+      </div>
 
-      {/* Nav items */}
       <div className="flex-1 p-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
@@ -105,56 +79,42 @@ export function EmployedDriverSidebar() {
               <div className="grid h-full w-12 shrink-0 place-content-center">
                 <item.icon className="h-[18px] w-[18px]" />
               </div>
-              {open && (
-                <span className="text-sm whitespace-nowrap">{item.label}</span>
-              )}
+              <span className="text-sm whitespace-nowrap">{item.label}</span>
             </Link>
           );
         })}
       </div>
 
-      {/* User section → Settings */}
       <div className="p-3">
         <Link
           to="/employed-driver/settings"
-          className={`flex items-center gap-2.5 mb-3 px-1 rounded-full transition-colors hover:bg-muted py-1.5 ${!open ? "justify-center" : ""} ${
-            location.pathname === "/employed-driver/settings"
-              ? "bg-primary/10"
-              : ""
+          className={`flex items-center gap-2.5 mb-3 px-1 rounded-full transition-colors hover:bg-muted py-1.5 ${
+            location.pathname === "/employed-driver/settings" ? "bg-primary/10" : ""
           }`}
         >
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white text-xs font-bold shrink-0">
             {initials}
           </div>
-          {open && (
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {driverName}
-              </p>
-              <p className="text-xs text-gray-400 truncate">{companyName}</p>
-            </div>
-          )}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{driverName}</p>
+            <p className="text-xs text-gray-400 truncate">{companyName}</p>
+          </div>
         </Link>
 
-        {/* Logout */}
         <button
           onClick={handleLogout}
-          className={`flex items-center gap-2.5 mb-3 w-full px-1 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 py-1.5 transition-colors ${!open ? "justify-center" : ""}`}
+          className="flex items-center gap-2.5 mb-3 w-full px-1 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 py-1.5 transition-colors"
         >
           <div className="h-9 w-9 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
             <LogOut className="h-4 w-4" />
           </div>
-          {open && (
-            <span className="text-sm font-medium">Sign out</span>
-          )}
+          <span className="text-sm font-medium">Sign out</span>
         </button>
-
       </div>
 
-      {/* Collapse */}
       <button
         onClick={() => setOpen(!open)}
-        className=" p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        className="hidden lg:block p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <div className="flex items-center justify-center">
           <ChevronsRight
@@ -162,6 +122,15 @@ export function EmployedDriverSidebar() {
           />
         </div>
       </button>
-    </nav>
+    </>
+  );
+
+  return (
+    <>
+      <MobileTopBar onMenuClick={toggle} title="dispatchCore" />
+      <MobileSidebarWrapper mobileOpen={mobileOpen} onClose={close} desktopOpen={open}>
+        {sidebarContent}
+      </MobileSidebarWrapper>
+    </>
   );
 }

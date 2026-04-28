@@ -70,17 +70,17 @@ export default function DriverBidsPage() {
   }, [bids]);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DriverSidebar />
-      <div className="flex-1 bg-background overflow-auto">
-        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+      <div className="flex-1 min-w-0 bg-background overflow-y-auto">
+        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
           <h1 className="text-xl font-bold text-foreground">
             My Bids
           </h1>
           <p className="text-sm text-muted-foreground">
             {bids.length} total bids
           </p>
-          <div className="flex items-center gap-1 mt-3">
+          <div className="flex items-center gap-1 mt-3 overflow-x-auto scrollbar-hide pb-1">
             {(
               ["all", "pending", "accepted", "rejected", "expired"] as const
             ).map((s) => (
@@ -98,7 +98,7 @@ export default function DriverBidsPage() {
           </div>
         </header>
 
-        <div className="p-6 space-y-3">
+        <div className="p-4 sm:p-6 space-y-3">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-gray-400">
               <LoadingPackage />
@@ -131,15 +131,19 @@ export default function DriverBidsPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <span className="truncate">{bid.pickupAddress}</span>
-                    <ArrowRight className="h-3 w-3 shrink-0 text-gray-300" />
-                    <MapPin className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                    <span className="truncate">{bid.deliveryAddress}</span>
+                  <div className="text-sm text-muted-foreground mb-3 space-y-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="truncate">{bid.pickupAddress}</span>
+                    </div>
+                    <ArrowRight className="h-3 w-3 text-gray-300 ml-1" />
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                      <span className="truncate">{bid.deliveryAddress}</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-4 p-3 rounded-full bg-muted/50 mb-3">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 p-3 rounded-3xl bg-muted/50 mb-3">
                     <div>
                       <p className="text-[10px] uppercase text-gray-400">
                         Your Offer

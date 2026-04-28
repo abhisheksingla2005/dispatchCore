@@ -10,6 +10,11 @@ import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 const GlobeInteractive = lazy(() =>
   import("@/components/ui/cobe-globe-interactive").then((m) => ({ default: m.GlobeInteractive }))
 );
+const Dithering = lazy(() =>
+  import("@paper-design/shaders-react").then((mod) => ({
+    default: mod.Dithering,
+  }))
+);
 import {
   Github,
   Twitter,
@@ -132,6 +137,25 @@ const noiseDataUrl = (() => {
   return canvas.toDataURL("image/png");
 })();
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return mobile;
+}
+
+/** Swap Unsplash `w=` param for smaller mobile images */
+function responsiveSrc(src: string, isMobile: boolean) {
+  if (!isMobile) return src;
+  return src.replace(/w=\d+/, "w=400");
+}
+
 function ParallaxImage({
   src,
   alt,
@@ -141,27 +165,29 @@ function ParallaxImage({
   alt: string;
   className?: string;
 }) {
+  const isMobile = useIsMobile();
   const ref = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], ["-15%", "15%"]);
+  // Disable parallax on mobile for perf
+  const y = useTransform(scrollYProgress, [0, 1], isMobile ? ["0%", "0%"] : ["-15%", "15%"]);
+  const imgSrc = responsiveSrc(src, isMobile);
 
   return (
     <div
       ref={ref}
       className={`overflow-hidden rounded-3xl relative ${className}`}
       style={{
-        willChange: "transform",
+        willChange: isMobile ? "auto" : "transform",
         transform: "translateZ(0)",
         borderRadius: "1.5rem",
         clipPath: "inset(0 round 1.5rem)",
       }}
     >
       {error ? (
-        /* Accent placeholder when image fails to load */
         <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 flex items-center justify-center min-h-[200px]">
           <div className="text-center">
             <div className="h-12 w-12 mx-auto mb-3 rounded-2xl bg-primary/15 flex items-center justify-center">
@@ -172,17 +198,24 @@ function ParallaxImage({
             <p className="text-xs font-medium text-primary/50 uppercase tracking-wider">{alt}</p>
           </div>
         </div>
+      ) : isMobile ? (
+        <img
+          src={imgSrc}
+          alt={alt}
+          className="w-full h-full object-cover"
+          onError={() => setError(true)}
+          loading="lazy"
+        />
       ) : (
         <motion.img
-          src={src}
+          src={imgSrc}
           alt={alt}
-          style={{ y, willChange: "transform" }}
-          className="w-full h-[116%] object-cover"
+          style={{ y, willChange: "transform", top: "-15%" }}
+          className="w-full h-[130%] object-cover absolute left-0"
           onError={() => setError(true)}
           loading="lazy"
         />
       )}
-      {/* Warm tint + grain overlay */}
       {!error && (
         <>
           <div className="absolute inset-0 pointer-events-none bg-primary/[0.1] mix-blend-multiply" />
@@ -203,67 +236,99 @@ function ParallaxImage({
 function HeroSection() {
   const heroRef = useRef<HTMLDivElement>(null);
   const inView = useInView(heroRef, { once: true });
+  const isMobile = useIsMobile();
   const [videoReady, setVideoReady] = useState(false);
 
   return (
     <section className="relative min-h-screen overflow-hidden">
-      {/* Lottie placeholder — visible while video loads */}
-      <AnimatePresence>
-        {!videoReady && (
-          <motion.div
-            className="absolute inset-0 z-[1] flex items-center justify-center"
+      {isMobile ? (
+        <>
+          <div className="absolute inset-0 bg-background" />
+          <div
+            className="absolute inset-0 z-0"
             style={{
-              background: "linear-gradient(135deg, hsl(20 10% 8%) 0%, hsl(20 8% 14%) 40%, hsl(20 6% 10%) 100%)",
+              maskImage: "linear-gradient(to bottom, black 0%, black 30%, transparent 85%)",
+              WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 30%, transparent 85%)",
             }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <DotLottieReact
-              src="/Untitled file.lottie"
-              loop
-              autoplay
-              className="w-48 h-48 md:w-64 md:h-64 opacity-60"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Suspense fallback={<div className="absolute inset-0 bg-background" />}>
+              <Dithering
+                colorBack="#00000000"
+                colorFront="#5c2d0e"
+                shape="warp"
+                type="4x4"
+                speed={0.15}
+                className="size-full"
+                minPixelRatio={1}
+              />
+            </Suspense>
+          </div>
+        </>
+      ) : (
+        <>
+          <AnimatePresence>
+            {!videoReady && (
+              <motion.div
+                className="absolute inset-0 z-[1] flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, hsl(20 10% 8%) 0%, hsl(20 8% 14%) 40%, hsl(20 6% 10%) 100%)",
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <DotLottieReact
+                  src="/Untitled file.lottie"
+                  loop
+                  autoplay
+                  className="w-48 h-48 md:w-64 md:h-64 opacity-60"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      <motion.video
-        src="/hero.mp4"
-        className="absolute inset-0 h-full w-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
-        onCanPlay={() => setVideoReady(true)}
-        initial={{ scale: 1.12, opacity: 0 }}
-        animate={videoReady ? { scale: 1, opacity: 1 } : { scale: 1.12, opacity: 0 }}
-        transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
-      />
+          <motion.video
+            src="/hero.mp4"
+            poster="/hero-poster.jpg"
+            className="absolute inset-0 h-full w-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onCanPlay={() => setVideoReady(true)}
+            initial={{ scale: 1.12, opacity: 0 }}
+            animate={videoReady ? { scale: 1, opacity: 1 } : { scale: 1.12, opacity: 0 }}
+            transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
+          />
+        </>
+      )}
+      {/* Overlays for video (desktop only) */}
+      {!isMobile && (
+        <>
+          {/* Light theme overlays */}
+          <div className="absolute inset-0 dark:hidden bg-[linear-gradient(180deg,rgba(10,8,6,0.10)_0%,rgba(10,8,6,0.22)_32%,rgba(10,8,6,0.45)_100%)]" />
+          <div
+            className="absolute inset-0 opacity-20 dark:hidden"
+            style={{
+              backgroundImage: `url(${noiseDataUrl})`,
+              backgroundRepeat: "repeat",
+            }}
+          />
+          <div className="absolute inset-0 dark:hidden bg-[linear-gradient(90deg,rgba(8,7,5,0.20)_0%,rgba(8,7,5,0.06)_38%,rgba(8,7,5,0.20)_100%)]" />
 
-      {/* Light theme overlays — lighter so video shows through */}
-      <div className="absolute inset-0 dark:hidden bg-[linear-gradient(180deg,rgba(10,8,6,0.10)_0%,rgba(10,8,6,0.22)_32%,rgba(10,8,6,0.45)_100%)]" />
-      <div
-        className="absolute inset-0 opacity-20 dark:hidden"
-        style={{
-          backgroundImage: `url(${noiseDataUrl})`,
-          backgroundRepeat: "repeat",
-        }}
-      />
-      <div className="absolute inset-0 dark:hidden bg-[linear-gradient(90deg,rgba(8,7,5,0.20)_0%,rgba(8,7,5,0.06)_38%,rgba(8,7,5,0.20)_100%)]" />
-
-      {/* Dark theme overlays — heavier for readability */}
-      <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(180deg,rgba(10,8,6,0.20)_0%,rgba(10,8,6,0.35)_32%,rgba(10,8,6,0.60)_100%)]" />
-      <div
-        className="absolute inset-0 opacity-30 hidden dark:block"
-        style={{
-          backgroundImage: `url(${noiseDataUrl})`,
-          backgroundRepeat: "repeat",
-        }}
-      />
-      <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(90deg,rgba(8,7,5,0.35)_0%,rgba(8,7,5,0.12)_38%,rgba(8,7,5,0.35)_100%)]" />
-      <div ref={heroRef} className="relative z-10 flex min-h-screen items-end px-6 pb-16 pt-32 lg:px-16 lg:pb-20">
+          {/* Dark theme overlays */}
+          <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(180deg,rgba(10,8,6,0.20)_0%,rgba(10,8,6,0.35)_32%,rgba(10,8,6,0.60)_100%)]" />
+          <div
+            className="absolute inset-0 opacity-30 hidden dark:block"
+            style={{
+              backgroundImage: `url(${noiseDataUrl})`,
+              backgroundRepeat: "repeat",
+            }}
+          />
+          <div className="absolute inset-0 hidden dark:block bg-[linear-gradient(90deg,rgba(8,7,5,0.35)_0%,rgba(8,7,5,0.12)_38%,rgba(8,7,5,0.35)_100%)]" />
+        </>
+      )}
+      <div ref={heroRef} className="relative z-10 flex min-h-screen items-end px-4 sm:px-6 pb-12 sm:pb-16 pt-24 sm:pt-32 lg:px-16 lg:pb-20">
         <div className="mx-auto flex w-full max-w-7xl items-end">
           <div className="max-w-3xl p-2 md:p-4">
             {/* Subtitle */}
@@ -277,7 +342,7 @@ function HeroSection() {
             </motion.p>
 
             {/* Word-by-word heading */}
-            <h1 className="text-5xl font-bold leading-[0.98] tracking-tight text-white md:text-7xl lg:text-[5.5rem]">
+            <h1 className="text-3xl sm:text-5xl font-bold leading-[0.98] tracking-tight text-white md:text-7xl lg:text-[5.5rem]">
               <WordReveal text="Dispatch everything." delayStart={0.25} />
             </h1>
 
@@ -360,7 +425,7 @@ function HeroSection() {
 function TrustedBy() {
   const logos = ["SwiftHaul", "NovaCargo", "Parcelion", "FleetVox", "Routesmith", "Cargonex"];
   return (
-    <section className="relative px-6 pb-16 pt-12 lg:px-16">
+    <section className="relative px-4 sm:px-6 pb-12 sm:pb-16 pt-10 sm:pt-12 lg:px-16">
       {/* Top gradient that blends into the hero's bottom fade */}
       <div
         className="absolute inset-x-0 top-0 h-24 pointer-events-none"
@@ -372,10 +437,10 @@ function TrustedBy() {
         <Reveal>
           <p className="text-sm text-muted-foreground mb-8">Trusted by:</p>
         </Reveal>
-        <div className="flex items-center flex-wrap gap-10">
+        <div className="flex items-center flex-wrap gap-6 sm:gap-10">
           {logos.map((name, i) => (
             <Reveal key={name} delay={i * 0.09} direction="right">
-              <span className="text-xl font-semibold text-foreground/60 tracking-wide transition-colors duration-300 hover:text-foreground/90">
+              <span className="text-base sm:text-xl font-semibold text-foreground/60 tracking-wide transition-colors duration-300 hover:text-foreground/90">
                 {name}
               </span>
             </Reveal>
@@ -806,7 +871,7 @@ function TestimonialSection() {
                 </div>
 
                 <blockquote>
-                  <p className="text-xl md:text-2xl font-semibold text-foreground leading-snug mb-6">
+                  <p className="text-base sm:text-xl md:text-2xl font-semibold text-foreground leading-snug mb-6">
                     "{t.quote}"
                   </p>
                   <footer>
@@ -897,7 +962,7 @@ function HowItWorksSection() {
                   viewport={{ once: true, margin: "-60px" }}
                   transition={{ duration: 0.8, delay: 0.2 + i * 0.18, ease: [0.16, 1, 0.3, 1] }}
                 />
-                <span className="text-5xl md:text-6xl font-bold text-primary tracking-tight block mb-6 mt-4 transition-transform duration-300 group-hover:translate-x-1">
+                <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary tracking-tight block mb-6 mt-4 transition-transform duration-300 group-hover:translate-x-1">
                   {step.num}
                 </span>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -937,7 +1002,7 @@ function CenteredCTA() {
   return (
     <section className="py-24 px-6 lg:px-16">
       <div className="max-w-7xl mx-auto">
-        <div className="relative overflow-hidden rounded-[30px] border border-primary/15 py-16 px-8 md:px-16">
+        <div className="relative overflow-hidden rounded-[20px] sm:rounded-[30px] border border-primary/15 py-10 sm:py-16 px-5 sm:px-8 md:px-16">
           {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-tl from-primary via-primary/[0.85] to-primary/[0.55]" />
           {/* Grain overlay */}
@@ -971,7 +1036,7 @@ function CenteredCTA() {
             </div>
 
             {/* Right — interactive globe, partially clipped */}
-            <div className="absolute -bottom-72 -right-16 md:-right-8 w-[380px] md:w-[480px] lg:w-[560px] pointer-events-auto">
+            <div className="hidden sm:block absolute -bottom-72 -right-16 md:-right-8 w-[380px] md:w-[480px] lg:w-[560px] pointer-events-auto">
               <Suspense fallback={<div className="w-full aspect-square" />}>
                 <GlobeInteractive
                   className="w-full"
@@ -999,7 +1064,7 @@ export default function LandingPage() {
   // useSmoothScroll removed — conflicts with Framer Motion scroll tracking
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Navbar />
       <HeroSection />
       <TrustedBy />

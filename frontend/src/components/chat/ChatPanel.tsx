@@ -16,6 +16,7 @@ import {
   Users,
   Search,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import LoadingPackage from "@/components/ui/loading-package";
 import {
@@ -401,7 +402,8 @@ export default function ChatPanel({
   return (
     <div className="flex flex-1 h-[calc(100vh-4rem)] bg-card rounded-3xl border border-border overflow-hidden">
       {/* ── Conversation sidebar ── */}
-      <div className="w-80 border-r border-border flex flex-col">
+      {/* Mobile: full-width when no chat selected, hidden when chat active */}
+      <div className={`w-full lg:w-80 border-r border-border flex flex-col ${activeKey ? "hidden lg:flex" : "flex"}`}>
         <div className="p-4 border-b border-border">
           <h2 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -519,7 +521,8 @@ export default function ChatPanel({
       </div>
 
       {/* ── Chat area ── */}
-      <div className="flex-1 flex flex-col">
+      {/* Mobile: fullscreen when chat active, hidden when on list */}
+      <div className={`flex-1 flex flex-col ${!activeKey ? "hidden lg:flex" : "flex"}`}>
         {!activeConversation && !isNewConversation ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -532,8 +535,16 @@ export default function ChatPanel({
         ) : (
           <>
             {/* Header */}
-            <div className="px-5 py-3.5 border-b border-border flex items-center justify-between bg-muted/50">
-              <div className="flex items-center gap-3">
+            <div className="px-3 sm:px-5 py-3.5 border-b border-border flex items-center justify-between bg-muted/50">
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Back button — mobile only */}
+                <button
+                  onClick={() => setActiveKey(null)}
+                  className="lg:hidden p-1.5 -ml-1 rounded-full hover:bg-muted transition-colors"
+                  aria-label="Back to conversations"
+                >
+                  <ArrowLeft className="h-5 w-5 text-foreground" />
+                </button>
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
                   {getInitials(
                     activeConversation?.otherParticipant?.name ||
@@ -581,7 +592,7 @@ export default function ChatPanel({
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-3">
               {msgLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
@@ -607,7 +618,7 @@ export default function ChatPanel({
                       className={`flex ${mine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[70%] ${mine ? "items-end" : "items-start"}`}
+                        className={`max-w-[85%] sm:max-w-[70%] ${mine ? "items-end" : "items-start"}`}
                       >
                         {!mine && (
                           <p className="text-xs text-muted-foreground mb-1 ml-1">

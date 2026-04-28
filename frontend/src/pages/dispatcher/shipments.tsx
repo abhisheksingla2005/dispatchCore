@@ -194,14 +194,14 @@ export default function ShipmentsPage() {
   }, [shipments, search, statusFilter]);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DashboardSidebar />
       <div className="flex-1 min-h-screen bg-background overflow-auto lg:h-screen lg:min-h-0 lg:overflow-hidden flex flex-col lg:flex-row">
         {/* ═══ Left — Shipment List ═══ */}
         <div
           className={`${selected ? "lg:w-[55%]" : "w-full"} border-r border-border flex flex-col transition-all lg:min-h-0 lg:h-full`}
         >
-          <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
+          <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h1 className="text-xl font-bold text-foreground">Shipments</h1>
@@ -323,7 +323,7 @@ export default function ShipmentsPage() {
         {/* ═══ Right — Shipment Detail Panel ═══ */}
         {selected && (
           <div className="dc-scrollbar lg:w-[45%] bg-card border-l border-border overflow-y-auto lg:min-h-0 lg:h-full lg:flex lg:flex-col">
-            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-foreground">
                 Shipment Details
               </h2>

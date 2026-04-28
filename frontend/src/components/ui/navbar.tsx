@@ -6,12 +6,21 @@ import { Link } from "react-router-dom";
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
   const toggleMenu = () => setIsOpen(!isOpen);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onResize = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onResize);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      mq.removeEventListener("change", onResize);
+    };
   }, []);
 
   const navItems = [
@@ -23,14 +32,14 @@ export function Navbar() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 flex justify-center w-full z-50 transition-all duration-500 ease-out"
+      className="fixed top-0 left-0 right-0 flex justify-end md:justify-center w-full z-50 transition-all duration-500 ease-out"
       style={{ padding: scrolled ? "12px 16px" : "0px" }}
     >
       <motion.div
         className="relative flex items-center justify-between px-3 transition-all duration-500 ease-out"
         style={{
-          maxWidth: scrolled ? "800px" : "100%",
-          width: "100%",
+          maxWidth: scrolled ? (isMobile ? "calc(100vw - 32px)" : "800px") : "100%",
+          width: scrolled && isMobile ? "auto" : "100%",
           paddingTop: scrolled ? "12px" : "16px",
           paddingBottom: scrolled ? "12px" : "16px",
           borderRadius: scrolled ? "50px" : "0px",

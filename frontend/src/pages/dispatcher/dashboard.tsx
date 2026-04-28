@@ -388,35 +388,33 @@ export default function DashboardPage() {
   }, [selectedShipment]);
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DashboardSidebar />
 
       <div className="flex-1 bg-background overflow-auto">
         {/* Top Bar */}
-        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
+        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
                 Welcome back, {user?.name?.split(" ")[0] ?? "there"}!
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 You have {user?.newDeliveries ?? 0} new delivered{" "}
                 {user?.newDeliveries === 1 ? "parcel" : "parcels"}.
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowCreateOrder(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Create new order
-              </button>
-            </div>
+            <button
+              onClick={() => setShowCreateOrder(true)}
+              className="shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Create new order</span>
+            </button>
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {statsMeta.map((meta) => (
@@ -550,7 +548,7 @@ export default function DashboardPage() {
                       ✕
                     </button>
                   </div>
-                  <div className="grid grid-cols-6 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 text-center">
                     <div>
                       <p className="text-[10px] text-gray-400 uppercase">
                         Driver
@@ -643,7 +641,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-card rounded-3xl border border-border overflow-hidden">
+            <div className="bg-card rounded-3xl border border-border overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">

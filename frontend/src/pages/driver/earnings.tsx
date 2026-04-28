@@ -460,10 +460,10 @@ export default function DriverEarningsPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex flex-col lg:flex-row min-h-screen w-full">
       <DriverSidebar />
       <div className="flex-1 bg-background overflow-auto">
-        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-6 py-4 flex items-center justify-between">
+        <header className="sticky top-0 z-10 bg-card backdrop-blur-xl border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">Earnings</h1>
             <p className="text-sm text-muted-foreground">
@@ -509,7 +509,7 @@ export default function DriverEarningsPage() {
             <LoadingPackage />
           </div>
         ) : (
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {view === "month" ? (
               /* ═══════════════ MONTH VIEW ═══════════════ */
               <motion.div

@@ -18,6 +18,7 @@ const {
 } = require('../utils/constants');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors');
 const logger = require('../config/logger');
+const mailService = require('./mailService');
 
 class MarketplaceService {
     constructor(realtime) {
@@ -249,6 +250,17 @@ class MarketplaceService {
             // Emit events via RTDB
             this._emitBidResult(bid, assignment);
 
+            // Send bid accepted email to winning driver (fire-and-forget)
+            if (bid.driver?.email) {
+              mailService.sendBidUpdateEmail(bid.driver, {
+                orderId: bid.order_id,
+                bidAmount: bid.offered_price,
+                status: 'ACCEPTED',
+              }).catch((err) => {
+                logger.error({ err, bidId }, 'Failed to send bid accepted email');
+              });
+            }
+
             return assignment;
         } catch (error) {
             await transaction.rollback();
@@ -288,6 +300,18 @@ class MarketplaceService {
                 bidId,
                 orderId: bid.order_id,
             });
+        }
+
+        // Send bid rejected email to driver (fire-and-forget)
+        const driver = await Driver.findByPk(bid.driver_id, { attributes: ['id', 'name', 'email'] });
+        if (driver?.email) {
+          mailService.sendBidUpdateEmail(driver, {
+            orderId: bid.order_id,
+            bidAmount: bid.offered_price,
+            status: 'REJECTED',
+          }).catch((err) => {
+            logger.error({ err, bidId }, 'Failed to send bid rejected email');
+          });
         }
 
         return bid;

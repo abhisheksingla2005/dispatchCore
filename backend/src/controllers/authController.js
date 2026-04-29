@@ -21,6 +21,7 @@ const { UnauthorizedError, NotFoundError } = require('../utils/errors');
 const { auth } = require('../config/firebase');
 const { verifyPassword } = require('../utils/password');
 const logger = require('../config/logger');
+const mailService = require('../services/mailService');
 
 const SUPERADMIN_EMAIL = (process.env.SUPERADMIN_EMAIL || 'admin@dispatchcore.com').toLowerCase();
 
@@ -152,7 +153,7 @@ const createSession = async (req, res, next) => {
           name: displayName,
           email,
           phone: firebaseUser.phoneNumber || null,
-          password: crypto.randomBytes(32).toString('hex'),
+          password_hash: crypto.randomBytes(32).toString('hex'),
           type: 'INDEPENDENT',
           company_id: null,
           status: 'AVAILABLE',
@@ -166,6 +167,14 @@ const createSession = async (req, res, next) => {
         });
 
         logger.info({ uid, email, driverId: newDriver.id }, 'Auto-registered personal email as independent driver');
+
+        // Send welcome email (fire-and-forget)
+        mailService.sendWelcomeEmail(
+          { name: newDriver.name, email: newDriver.email },
+          'driver',
+        ).catch((err) => {
+          logger.error({ err, driverId: newDriver.id }, 'Failed to send welcome email');
+        });
 
         return success(res, {
           accountType: 'independent_driver',
@@ -199,6 +208,14 @@ const createSession = async (req, res, next) => {
       });
 
       logger.info({ uid, email, companyId: newCompany.id, domain }, 'Auto-registered company domain user');
+
+      // Send welcome email (fire-and-forget)
+      mailService.sendWelcomeEmail(
+        { name: newCompany.name, email: newCompany.email },
+        'company',
+      ).catch((err) => {
+        logger.error({ err, companyId: newCompany.id }, 'Failed to send welcome email');
+      });
 
       return success(res, {
         accountType: 'company',

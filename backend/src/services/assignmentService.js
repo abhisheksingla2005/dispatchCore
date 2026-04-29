@@ -26,6 +26,7 @@ const {
 } = require('../utils/constants');
 const { NotFoundError, ConflictError, LockTimeoutError } = require('../utils/errors');
 const logger = require('../config/logger');
+const mailService = require('./mailService');
 
 class AssignmentService {
   constructor(realtime) {
@@ -145,6 +146,13 @@ class AssignmentService {
 
       // Emit real-time events via Firebase RTDB
       this._emitAssignmentEvents(assignment, order, driver);
+
+      // Send assignment email to driver (fire-and-forget)
+      if (driver.email) {
+        mailService.sendOrderAssignedEmail(driver, order).catch((err) => {
+          logger.error({ err, driverId, orderId }, 'Failed to send assignment email');
+        });
+      }
 
       return assignment;
     } catch (error) {

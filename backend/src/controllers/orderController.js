@@ -12,6 +12,8 @@ const { success } = require('../utils/response');
 const { NotFoundError, ConflictError, ForbiddenError } = require('../utils/errors');
 const { ORDER_STATUS } = require('../utils/constants');
 const { attachLegacyUserShape } = require('../utils/driverSerializer');
+const logger = require('../config/logger');
+const mailService = require('../services/mailService');
 
 const createOrder = async (req, res, next) => {
   try {
@@ -275,6 +277,13 @@ const updateOrderStatus = async (req, res, next) => {
         assignment_id: orderAssignment.id,
         event_type: status,
         timestamp: new Date(),
+      });
+    }
+
+    // Send tracking email to recipient when picked up
+    if (status === 'PICKED_UP' && order.recipient_email) {
+      mailService.sendTrackingEmail(order).catch((err) => {
+        logger.error({ err, orderId: order.id }, 'Failed to send tracking email');
       });
     }
 

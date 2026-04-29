@@ -14,6 +14,8 @@ const { ensureEmailAvailable } = require('../utils/emailUniqueness');
 const { COMPANY_NOTIFICATION_DEFAULTS, APPEARANCE_DEFAULTS } = require('../utils/defaults');
 const { auth } = require('../config/firebase');
 const logger = require('../config/logger');
+const env = require('../config/env');
+const mailService = require('../services/mailService');
 
 
 
@@ -93,6 +95,22 @@ const createCompany = async (req, res, next) => {
         driverId: null,
       });
     }
+
+    // Send welcome email (fire-and-forget)
+    mailService.sendWelcomeEmail(
+      { name: company.name, email: company.email },
+      'company',
+    ).catch((err) => {
+      logger.error({ err, companyId: company.id }, 'Failed to send welcome email');
+    });
+
+    // Send verification email (fire-and-forget)
+    mailService.sendVerificationEmail(
+      { name: company.name, email: company.email },
+      `${env.frontendUrl}/verify?id=${company.id}`,
+    ).catch((err) => {
+      logger.error({ err, companyId: company.id }, 'Failed to send verification email');
+    });
 
     return success(res, serializeCompany(company), null, 201);
   } catch (error) {

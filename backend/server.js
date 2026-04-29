@@ -31,6 +31,10 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('Database authenticated');
 
+    // Verify SMTP connection (non-blocking — server boots even if SMTP fails)
+    const { verifyConnection } = require('./src/config/mail');
+    verifyConnection();
+
     const server = http.createServer(app);
 
     registerServices(app);

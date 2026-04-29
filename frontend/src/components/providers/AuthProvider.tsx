@@ -37,6 +37,13 @@ const googleProvider = new GoogleAuthProvider();
 async function createBackendSession(): Promise<AuthSessionResponse> {
   const sessionData = await post<AuthSessionResponse>("/auth/session");
   applyAuthSession(sessionData);
+
+  // Force-refresh ID token so new custom claims (role, companyId, driverId)
+  // set by the backend are included in subsequent API requests.
+  if (auth.currentUser) {
+    await auth.currentUser.getIdToken(true);
+  }
+
   return sessionData;
 }
 

@@ -21,6 +21,7 @@ if (env.smtp.host) {
       user: env.smtp.user,
       pass: env.smtp.pass,
     },
+    family: 4, // Force IPv4 (required for Render)
   });
 } else {
   logger.warn('SMTP_HOST not configured — emails will be logged to console only');

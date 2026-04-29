@@ -52,7 +52,8 @@ A platform-level SuperAdmin has full visibility across all companies to manage t
 | **UI Primitives** | Radix UI |
 | **Backend** | Node.js, Express 4 |
 | **Database** | MySQL (Sequelize ORM) |
-| **Real-Time** | Socket.io |
+| **Real-Time** | Firebase Realtime Database |
+| **Email** | Nodemailer (SMTP) |
 | **Security** | Helmet, express-rate-limit, express-validator |
 
 
@@ -61,8 +62,8 @@ A platform-level SuperAdmin has full visibility across all companies to manage t
 ### Concurrent Assignment Prevention
 Two dispatchers assigning the same order simultaneously would cause double-assignment. The assignment service uses Sequelize SERIALIZABLE transactions with pessimistic row locking (`SELECT ... FOR UPDATE`) — the second transaction blocks until the first commits, then fails with a 409 conflict rather than silently creating a duplicate assignment.
 
-### Scoped WebSocket Rooms
-Socket.io rooms are namespaced per entity: `company:{id}:dispatchers`, `driver:{id}`, `order:{id}:tracking`. A driver GPS ping broadcasts only to that company's dispatchers and the relevant customer tracking page — not to the entire connected pool. This enforces multi-tenant isolation at the real-time layer.
+### Real-Time Events via Firebase
+Firebase Realtime Database powers all live updates — driver GPS pings, order status changes, assignment notifications, and marketplace bid updates. Events are written to Firebase paths like `/drivers/{id}/location` and `/orders/{id}/status`, with clients subscribing to relevant paths for instant updates.
 
 ### Multi-Tenant Data Isolation
 Every table in the schema chains back to `company_id`. A `tenantResolver` middleware extracts the company scope from request headers and injects it into every query — Company A cannot read or write Company B's orders, drivers, or assignments.
@@ -112,6 +113,7 @@ npm run dev        # → http://localhost:5173
 - Ensure `FRONTEND_URL` exactly matches your deployed frontend origin.
 - Set strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in backend env.
 - Run `npm run db:migrate` during release before serving traffic.
+- **Email (SMTP)**: Configure SMTP credentials for transactional emails. On Render, use port 587 with `SMTP_SECURE=false` (STARTTLS) and `family: 4` (IPv4 only).
 
 ## The Vision
 

@@ -22,15 +22,29 @@ DB_PASS=
 # WebSocket
 WS_CORS_ORIGIN=http://localhost:5173
 
+# Frontend
+FRONTEND_URL=https://dispatchcoredelivery.vercel.app
+
 # Map Tiles
 MAPTILER_API_KEY=
-
-# Deployment
-FRONTEND_URL=http://localhost:5173
 
 # JWT
 JWT_ACCESS_SECRET=change-me-access-secret-at-least-32-chars
 JWT_REFRESH_SECRET=change-me-refresh-secret-at-least-32-chars
+
+# Firebase
+FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
+FIREBASE_DATABASE_URL=https://your-project-id.firebaseio.com
+
+# Email (Nodemailer SMTP)
+# For Render/production, use port 587 with secure=false (STARTTLS)
+# For Gmail with app password, port 465 with secure=true also works
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+EMAIL_FROM="dispatchCore <noreply@dispatchcore.com>"
 ```
 
 ### Startup Validation
@@ -392,7 +406,81 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 
 ---
 
-## 11. WebSocket Safety
+## 11. Email Service
+
+### Centralized Email Dispatch
+All outgoing emails go through `services/mailService.js` for consistent logging, error handling, and template rendering.
+
+### Email Templates
+Located in `utils/emailTemplates/`:
+- `baseLayout.js` — Shared HTML wrapper with dark theme styling
+- `verificationTemplate.js` — Email verification for new users
+- `welcomeTemplate.js` — Welcome email after registration
+- `orderAssignedTemplate.js` — Order assignment notification to drivers
+- `orderBidTemplate.js` — Bid status updates (accepted/rejected/pending)
+- `orderTrackingTemplate.js` — Tracking link sent to recipients
+
+### SMTP Configuration
+```javascript
+// config/mail.js
+const transporter = nodemailer.createTransport({
+  host: env.smtp.host,
+  port: env.smtp.port,
+  secure: env.smtp.secure,
+  auth: { user: env.smtp.user, pass: env.smtp.pass },
+  family: 4, // Force IPv4 (required for Render)
+});
+```
+
+### Email Triggers
+| Event | Email Sent | Recipient |
+|---|---|---|
+| New user registration | Welcome email | User |
+| Company created | Welcome + verification email | Company |
+| Order assigned | Assignment notification | Driver |
+| Bid accepted | Bid accepted email | Winning driver |
+| Bid rejected | Bid rejected email | Driver |
+| Order picked up | Tracking link | Recipient |
+
+### Fire-and-Forget Pattern
+Emails are sent asynchronously with error handling that doesn't block the main request:
+```javascript
+mailService.sendWelcomeEmail(user, 'driver').catch((err) => {
+  logger.error({ err, userId }, 'Failed to send welcome email');
+});
+```
+
+---
+
+## 12. Firebase Realtime Database
+
+### Real-Time Events
+Firebase RTDB replaces Socket.io for real-time updates. All live events flow through Firebase:
+- Driver location updates
+- Order status changes
+- Assignment notifications
+- Marketplace bid updates
+
+### Firebase Admin SDK
+Initialized on server startup with service account credentials:
+```javascript
+// config/firebase.js
+const admin = require('firebase-admin');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: env.firebase.databaseUrl,
+});
+```
+
+### Event Structure
+Events are written to Firebase paths like:
+- `/drivers/{driverId}/location` — GPS coordinates
+- `/orders/{orderId}/status` — Order status updates
+- `/companies/{companyId}/assignments` — Assignment notifications
+
+---
+
+## 13. WebSocket Safety
 
 ### Room Management
 Single socket handler file (`sockets/index.js`) manages all room joins:
@@ -415,7 +503,7 @@ High-frequency GPS pings are sent directly over WebSocket (`location:ping` event
 
 ---
 
-## 12. Frontend Conventions
+## 14. Frontend Conventions
 
 ### Styling
 - **Tailwind CSS v4** — utility-first CSS
@@ -442,7 +530,7 @@ High-frequency GPS pings are sent directly over WebSocket (`location:ping` event
 
 ---
 
-## 13. Git Workflow
+## 15. Git Workflow
 
 ### Branch Strategy
 ```

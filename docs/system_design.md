@@ -100,9 +100,9 @@ Last-mile delivery is the most expensive segment of the logistics chain. Small a
 
 | Priority | Features |
 |---|---|
-| **Must Have** | Multi-tenant isolation, Order CRUD, Direct assignment with locking, Live GPS tracking, WebSocket rooms, Marketplace listing, Bidding, Customer tracking page, Delivery history (role-scoped), In-app messaging |
-| **Should Have** | Route pre-registration, Route matching, Delivery event audit log, Earnings computation, Auto-refresh dashboards, Server-side status transition enforcement |
-| **Won't Have (CE-01)** | Push notifications, AI route optimization, Email notifications, CI/CD, WebSocket auth handshakes, Hub management UI, RouteStop multi-delivery batching, Per-user rate limiting |
+| **Must Have** | Multi-tenant isolation, Order CRUD, Direct assignment with locking, Live GPS tracking, Real-time events (Firebase), Marketplace listing, Bidding, Customer tracking page, Delivery history (role-scoped), In-app messaging |
+| **Should Have** | Route pre-registration, Route matching, Delivery event audit log, Earnings computation, Auto-refresh dashboards, Server-side status transition enforcement, Email notifications |
+| **Won't Have (CE-01)** | Push notifications, AI route optimization, CI/CD, Hub management UI, RouteStop multi-delivery batching, Per-user rate limiting |
 
 ---
 
@@ -123,14 +123,14 @@ graph TB
     subgraph Frontend["Frontend (React 19 + Vite 7)"]
         RC["React Components (TSX)"]
         RR["React Router DOM v7"]
-        SC["Socket.io Client"]
+        FB["Firebase SDK"]
         TW["Tailwind CSS v4"]
         FM["Framer Motion"]
     end
 
     subgraph Backend["Backend (Node.js + Express)"]
         REST["REST API (11 route modules)"]
-        WS["Socket.io Server"]
+        FA["Firebase Admin SDK"]
         MW["Middleware Layer"]
     end
 
@@ -145,15 +145,16 @@ graph TB
     subgraph Data["Data Layer"]
         ORM["Sequelize ORM v6"]
         DB[("MySQL")]
+        RTDB[("Firebase RTDB")]
     end
 
     Clients --> Frontend
     RC --> REST
-    SC --> WS
+    FB --> RTDB
     REST --> MW --> Services
-    WS --> Services
+    FA --> RTDB
     Services --> ORM --> DB
-    Services --> WS
+    Services --> FA --> RTDB
 ```
 
 ### 2.2 Data Flow Diagram (Level 0 - Context)
@@ -182,12 +183,12 @@ graph TB
 
     subgraph Communication["Communication Layer"]
         HTTP["Fetch API (custom wrapper)"]
-        WSC["Socket.io Client"]
+        FBC["Firebase Client SDK"]
     end
 
     subgraph API["API Layer"]
         ROUTER["Express Router (11 modules)"]
-        WSS["Socket.io Server"]
+        FBA["Firebase Admin SDK"]
     end
 
     subgraph Business["Business Logic Layer"]
@@ -435,14 +436,11 @@ classDiagram
     }
 
     class LocationService {
-        -io: SocketServer
-        -broadcastContextCache: Map~driverId, CachedContext~
+        -firebase: FirebaseAdmin
         +recordPing(driverId, lat, lng, speed, heading): LocationLog
         +getLatestLocation(driverId): LocationLog
         +getDriverLocations(companyId): LocationLog[]
         +broadcastLocation(driverId, location): void
-        -_getBroadcastContext(driverId): Driver|null
-        -_getTargetRooms(context): string[]
     }
 
     class RouteMatchingService {
@@ -462,20 +460,17 @@ classDiagram
         -_buildQuery(filters): QueryParams
     }
 
-    class SocketHandler {
-        +initializeSocket(io): void
-        +handleConnection(socket): void
-        -joinCompany(companyId): void
-        -joinMarketplace(companyId): void
-        -joinDriver(driverId): void
-        -joinTracking(orderId): void
-        -joinMessages(orderId, channel): void
-        -handleLocationPing(data): void
+    class FirebaseEventHandler {
+        +initialize(): void
+        +emitAssignmentEvent(assignment, order, driver): void
+        +emitBidEvent(bid, eventType): void
+        +emitLocationEvent(driverId, location): void
+        +emitOrderStatusEvent(orderId, status): void
     }
 
-    AssignmentService --> SocketHandler : emits events
-    MarketplaceService --> SocketHandler : emits events
-    LocationService --> SocketHandler : broadcasts GPS
+    AssignmentService --> FirebaseEventHandler : emits events
+    MarketplaceService --> FirebaseEventHandler : emits events
+    LocationService --> FirebaseEventHandler : broadcasts GPS
 ```
 
 ### 4.2 Error Handling Strategy
@@ -556,7 +551,7 @@ sequenceDiagram
     participant MW as Tenant Middleware
     participant AS as Assignment Service
     participant DB as MySQL
-    participant WS as Socket.io
+    participant FB as Firebase RTDB
 
     D->>API: POST /api/orders/:id/assign {driverId, vehicleId}
     API->>MW: Validate tenant scope
@@ -571,9 +566,8 @@ sequenceDiagram
     AS->>DB: INSERT INTO assignments
     AS->>DB: INSERT INTO delivery_events (ASSIGNED)
     AS->>DB: COMMIT
-    AS->>WS: Emit "assignment:created" to company room
-    AS->>WS: Emit "assignment:new" to driver:{driverId}
-    WS-->>D: Assignment confirmed (live update)
+    AS->>FB: Write assignment event to Firebase
+    FB-->>D: Assignment confirmed (live update)
     AS-->>API: Assignment object
     API-->>D: 201 Created
 ```
@@ -588,20 +582,20 @@ sequenceDiagram
     participant API as REST API
     participant MS as Marketplace Service
     participant DB as MySQL
-    participant WS as Socket.io
+    participant FB as Firebase RTDB
 
     Disp->>API: PUT /api/orders/55/list {price: 15}
     API->>MS: listOrder(55, 15)
     MS->>DB: UPDATE orders SET status='LISTED', listed_price=15
-    MS->>WS: Emit "order:listed" to marketplace room
-    WS-->>ID1: New listing available
-    WS-->>ID2: New listing available
+    MS->>FB: Write order listed event to Firebase
+    FB-->>ID1: New listing available
+    FB-->>ID2: New listing available
 
     ID1->>API: POST /api/bids {orderId: 55, price: 12}
     API->>MS: placeBid(55, driverA, 12)
     MS->>DB: INSERT INTO bids
-    MS->>WS: Emit "bid:new"
-    WS-->>Disp: New bid from Driver A
+    MS->>FB: Write bid event to Firebase
+    FB-->>Disp: New bid from Driver A
 
     Disp->>API: PUT /api/bids/1/accept
     API->>MS: acceptBid(1)
@@ -611,10 +605,10 @@ sequenceDiagram
     MS->>DB: UPDATE order SET status='ASSIGNED'
     MS->>DB: INSERT INTO assignments (source: BID)
     MS->>DB: COMMIT
-    MS->>WS: Emit "bid:accepted" + "assignment:created"
-    WS-->>ID1: Bid accepted
-    WS-->>ID2: Bid rejected
-    WS-->>Disp: Assignment confirmed
+    MS->>FB: Write bid accepted + assignment events to Firebase
+    FB-->>ID1: Bid accepted
+    FB-->>ID2: Bid rejected
+    FB-->>Disp: Assignment confirmed
 ```
 
 ### 5.4 Sequence Diagram — GPS Location Broadcasting
@@ -622,23 +616,23 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     actor DR as Driver
-    participant WSC as Socket.io Client
-    participant WSS as Socket.io Server
+    participant FBC as Firebase Client SDK
+    participant FBA as Firebase Admin SDK
     participant LS as Location Service
     participant DB as MySQL
 
     loop Every 3 seconds (via useGeolocationPing hook)
-        DR->>WSC: Browser Geolocation API
-        WSC->>WSS: Emit "location:ping" {driverId, lat, lng, speed, heading}
-        WSS->>LS: recordPing(driverId, lat, lng, speed, heading)
+        DR->>FBC: Browser Geolocation API
+        FBC->>FBA: Write location to /drivers/{driverId}/location
+        FBA->>LS: recordPing(driverId, lat, lng, speed, heading)
         LS->>DB: INSERT INTO driver_location_logs
         LS->>LS: shouldBroadcast(driver)?
 
         alt Employed Driver (always broadcast)
-            LS->>WSS: Emit to "company:{id}:dispatchers"
+            LS->>FBA: Write to /companies/{id}/drivers/{driverId}/location
         else Independent Driver with active assignment
-            LS->>WSS: Emit to "company:{id}:dispatchers"
-            LS->>WSS: Emit to "order:{id}:tracking"
+            LS->>FBA: Write to /companies/{id}/drivers/{driverId}/location
+            LS->>FBA: Write to /orders/{id}/tracking/driverLocation
         else Independent Driver without assignment
             Note right of LS: Do NOT broadcast
         end
@@ -843,27 +837,31 @@ The same `/api/history` endpoint returns different fields based on the caller's 
 | All Delivery Events | Yes | Yes (own) | Yes (own) |
 | Timestamps | Yes | Yes | Yes |
 
-### 6.3 WebSocket Events
+### 6.3 Firebase Realtime Database Events
 
-| Event | Direction | Room | Payload |
-|---|---|---|---|
-| `location:ping` | Client → Server | — | `{driverId, lat, lng, speed, heading}` |
-| `driver:location` | Server → Client | `company:{id}:dispatchers` | `{driverId, lat, lng, speed}` |
-| `order:listed` | Server → Client | `company:{id}:marketplace` | `{orderId, price, pickup, delivery}` |
-| `bid:new` | Server → Client | `company:{id}:marketplace` | `{bidId, orderId, driverId, price}` |
-| `bid:accepted` | Server → Client | `driver:{id}` | `{bidId, orderId, assignment}` |
-| `bid:rejected` | Server → Client | `driver:{id}` | `{bidId, orderId}` |
-| `assignment:created` | Server → Client | `company:{id}:dispatchers` | `{assignmentId, orderId, driverId}` |
-| `assignment:new` | Server → Client | `driver:{id}` | `{assignment, order details}` |
-| `order:status` | Server → Client | `order:{id}:tracking` | `{orderId, status, timestamp}` |
-| `driver:tracking` | Server → Client | `order:{id}:tracking` | `{lat, lng, estimatedArrival}` |
-| `message:new` | Server → Client | `order:{id}:chat:{channel}` | `{message object}` |
-| `join:company` | Client → Server | — | `{companyId}` |
-| `join:marketplace` | Client → Server | — | `{companyId}` |
-| `join:driver` | Client → Server | — | `{driverId}` |
-| `join:tracking` | Client → Server | — | `{orderId}` |
-| `join:messages` | Client → Server | — | `{orderId, channel}` |
-| `leave:room` | Client → Server | — | `{room}` |
+| Event | Firebase Path | Payload |
+|---|---|---|
+| Driver location | `/drivers/{driverId}/location` | `{lat, lng, speed, heading, timestamp}` |
+| Company driver location | `/companies/{companyId}/drivers/{driverId}/location` | `{lat, lng, speed, heading, timestamp}` |
+| Order status | `/orders/{orderId}/status` | `{status, timestamp}` |
+| Order tracking | `/orders/{orderId}/tracking/driverLocation` | `{lat, lng, estimatedArrival}` |
+| Assignment created | `/companies/{companyId}/assignments/{assignmentId}` | `{assignmentId, orderId, driverId, status}` |
+| Marketplace order listed | `/marketplace/orders/{orderId}` | `{orderId, price, pickup, delivery, companyId}` |
+| Bid placed | `/marketplace/bids/{bidId}` | `{bidId, orderId, driverId, price, status}` |
+| Bid accepted | `/marketplace/bids/{bidId}` | `{bidId, orderId, driverId, status: 'ACCEPTED', assignmentId}` |
+| Bid rejected | `/marketplace/bids/{bidId}` | `{bidId, orderId, driverId, status: 'REJECTED'}` |
+| Message | `/orders/{orderId}/messages/{messageId}` | `{sender, content, timestamp, channel}` |
+
+### 6.4 Email Notifications
+
+| Trigger | Email Type | Recipient |
+|---|---|---|
+| New user registration | Welcome email | User |
+| Company created | Welcome + verification email | Company |
+| Order assigned | Assignment notification | Driver |
+| Bid accepted | Bid accepted email | Winning driver |
+| Bid rejected | Bid rejected email | Driver |
+| Order picked up | Tracking link | Recipient |
 
 ---
 
@@ -880,7 +878,7 @@ The same `/api/history` endpoint returns different fields based on the caller's 
 | Database | Parameterized queries | Sequelize ORM (prevents SQL injection) |
 | Rate Limiting | Per-IP and per-endpoint limits | Express-rate-limit (100/15min API, 20/min GPS) |
 | Security Headers | Helmet.js | XSS, clickjack, MIME-sniff protection |
-| WebSocket | Identity-based room joining | Room membership via socket events |
+| Firebase | Path-based security rules | Firebase Security Rules for RTDB access control |
 
 ### 7.2 Performance Optimizations
 
@@ -889,7 +887,7 @@ The same `/api/history` endpoint returns different fields based on the caller's 
 | GPS ping debouncing | Client-side (useGeolocationPing hook) | Reduces write volume |
 | Composite indexes | MySQL | Sub-10ms query times on filtered lookups |
 | Connection pooling | Sequelize (min: 2, max: 10) | Reuse DB connections under load |
-| WebSocket rooms | Socket.io | Only send data to relevant clients |
+| Firebase RTDB subscriptions | Client-side | Real-time updates without polling |
 | Auto-refresh polling | Driver dashboards (30s interval) | Keeps data in sync without manual refresh |
 | Pessimistic locking | Assignment Service (SERIALIZABLE) | Zero double-assignments |
 
@@ -912,17 +910,18 @@ graph LR
 
     subgraph Render["Render (Backend)"]
         APP["Node.js Web Service"]
-        WSS["WebSocket (Socket.io)"]
     end
 
     subgraph Database
         MY["MySQL (Aiven)"]
+        FB["Firebase RTDB"]
     end
 
     B --> CDN --> REACT
     REACT -->|"API calls"| APP
-    REACT -->|"WebSocket"| WSS
+    REACT -->|"Firebase SDK"| FB
     APP --> MY
+    APP -->|"Firebase Admin"| FB
 ```
 
 ### 8.2 Monitoring & Logging
@@ -948,13 +947,15 @@ graph LR
 | UI Primitives | Radix UI | 1.x | Accessible component primitives |
 | Maps | MapLibre GL JS + react-map-gl | MapLibre 5.19, react-map-gl 8.1 | WebGL-powered real-time fleet tracking |
 | Routing | React Router DOM | v7 | Client-side routing |
-| Real-Time (Client) | Socket.io Client | 4.8 | WebSocket communication |
+| Real-Time (Client) | Firebase Client SDK | 10.x | Real-time data synchronization |
 | Backend | Node.js + Express | Express 4.22 | API and business logic |
-| Real-Time (Server) | Socket.io | 4.8 | WebSocket rooms and events |
+| Real-Time (Server) | Firebase Admin SDK | 12.x | Server-side Firebase operations |
 | ORM | Sequelize | 6.37 | Database abstraction and migrations |
 | Database | MySQL | via mysql2 3.18 | Relational data with ACID transactions |
+| Real-Time DB | Firebase RTDB | — | Real-time event streaming |
+| Email | Nodemailer | 8.x | SMTP email delivery |
 | Validation | Express-Validator + Joi | — | Request validation + env validation |
 | Security | Helmet | 8.1 | HTTP security headers |
 | Logging | Winston + Morgan | — | Structured logging |
 | Frontend Deploy | Vercel | — | Edge CDN, instant deploys |
-| Backend Deploy | Render | — | WebSocket support, managed services |
+| Backend Deploy | Render | — | Managed services |

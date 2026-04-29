@@ -12,6 +12,8 @@ const { NotFoundError, ConflictError, UnauthorizedError } = require('../utils/er
 const { hashPassword, verifyPassword } = require('../utils/password');
 const { ensureEmailAvailable } = require('../utils/emailUniqueness');
 const { COMPANY_NOTIFICATION_DEFAULTS, APPEARANCE_DEFAULTS } = require('../utils/defaults');
+const { auth } = require('../config/firebase');
+const logger = require('../config/logger');
 
 
 
@@ -49,6 +51,26 @@ const createCompany = async (req, res, next) => {
 
     await ensureEmailAvailable(email, {});
 
+    // Create Firebase Auth user for email/password sign-in
+    let firebaseUid = null;
+    try {
+      const firebaseUser = await auth.createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        displayName: name.trim(),
+      });
+      firebaseUid = firebaseUser.uid;
+    } catch (fbErr) {
+      // If user already exists in Firebase, fetch existing UID
+      if (fbErr.code === 'auth/email-already-exists') {
+        const existingUser = await auth.getUserByEmail(email.trim().toLowerCase());
+        firebaseUid = existingUser.uid;
+      } else {
+        logger.error({ err: fbErr, email }, 'Failed to create Firebase user during company signup');
+        throw fbErr;
+      }
+    }
+
     const normalizedLocation = location.trim();
     const company = await Company.create({
       name: name.trim(),
@@ -62,6 +84,15 @@ const createCompany = async (req, res, next) => {
       notification_preferences: notification_preferences ?? COMPANY_NOTIFICATION_DEFAULTS,
       appearance_preferences: appearance_preferences ?? APPEARANCE_DEFAULTS,
     });
+
+    // Set custom claims for role-based access
+    if (firebaseUid) {
+      await auth.setCustomUserClaims(firebaseUid, {
+        role: 'company',
+        companyId: company.id,
+        driverId: null,
+      });
+    }
 
     return success(res, serializeCompany(company), null, 201);
   } catch (error) {

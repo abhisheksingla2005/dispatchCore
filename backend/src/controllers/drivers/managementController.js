@@ -11,6 +11,8 @@ const {
   VEHICLE_CAPACITY_DEFAULTS,
 } = require('../../utils/defaults');
 const { ensureDriverAccess } = require('./access');
+const { auth } = require('../../config/firebase');
+const logger = require('../../config/logger');
 
 const getDrivers = async (req, res, next) => {
   try {
@@ -92,6 +94,25 @@ const createDriver = async (req, res, next) => {
 
     await ensureEmailAvailable(email);
 
+    // Create Firebase Auth user for email/password sign-in
+    let firebaseUid = null;
+    try {
+      const firebaseUser = await auth.createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        displayName: name.trim(),
+      });
+      firebaseUid = firebaseUser.uid;
+    } catch (fbErr) {
+      if (fbErr.code === 'auth/email-already-exists') {
+        const existingUser = await auth.getUserByEmail(email.trim().toLowerCase());
+        firebaseUid = existingUser.uid;
+      } else {
+        logger.error({ err: fbErr, email }, 'Failed to create Firebase user during driver creation');
+        throw fbErr;
+      }
+    }
+
     const driver = await Driver.create({
       name,
       email,
@@ -105,6 +126,15 @@ const createDriver = async (req, res, next) => {
       notification_preferences: DRIVER_NOTIFICATION_DEFAULTS,
       appearance_preferences: APPEARANCE_DEFAULTS,
     });
+
+    // Set custom claims
+    if (firebaseUid) {
+      await auth.setCustomUserClaims(firebaseUid, {
+        role: 'employed_driver',
+        companyId: req.tenantId,
+        driverId: driver.id,
+      });
+    }
 
     let vehicle = null;
     if (vehicle_type) {
@@ -140,6 +170,25 @@ const createIndependentDriver = async (req, res, next) => {
 
     await ensureEmailAvailable(email);
 
+    // Create Firebase Auth user for email/password sign-in
+    let firebaseUid = null;
+    try {
+      const firebaseUser = await auth.createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        displayName: name.trim(),
+      });
+      firebaseUid = firebaseUser.uid;
+    } catch (fbErr) {
+      if (fbErr.code === 'auth/email-already-exists') {
+        const existingUser = await auth.getUserByEmail(email.trim().toLowerCase());
+        firebaseUid = existingUser.uid;
+      } else {
+        logger.error({ err: fbErr, email }, 'Failed to create Firebase user during driver signup');
+        throw fbErr;
+      }
+    }
+
     const driver = await Driver.create({
       name,
       email,
@@ -153,6 +202,15 @@ const createIndependentDriver = async (req, res, next) => {
       notification_preferences: DRIVER_NOTIFICATION_DEFAULTS,
       appearance_preferences: APPEARANCE_DEFAULTS,
     });
+
+    // Set custom claims
+    if (firebaseUid) {
+      await auth.setCustomUserClaims(firebaseUid, {
+        role: 'independent_driver',
+        companyId: null,
+        driverId: driver.id,
+      });
+    }
 
     return success(res, serializeDriver(driver), null, 201);
   } catch (error) {

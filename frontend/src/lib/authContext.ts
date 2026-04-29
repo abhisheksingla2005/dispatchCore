@@ -18,6 +18,8 @@ export interface AuthContextValue {
   session: AuthSessionResponse | null;
   /** Sign in with email and password */
   signInEmail: (email: string, password: string) => Promise<AuthSessionResponse>;
+  /** Create Firebase user + sign in (for signup flow) */
+  signUpEmail: (email: string, password: string) => Promise<void>;
   /** Sign in with Google popup */
   signInGoogle: () => Promise<AuthSessionResponse>;
   /** Sign out */

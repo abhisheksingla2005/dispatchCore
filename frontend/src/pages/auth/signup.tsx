@@ -27,12 +27,15 @@ const Dithering = lazy(() =>
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9])\S{8,16}$/;
 
+/** Matches 10-15 digits, optional leading + */
+const PHONE_REGEX = /^\+?\d{10,15}$/;
+
 type AccountType = "company" | "driver";
 
 export function SignupPage() {
   useAutoTheme();
   const navigate = useNavigate();
-  const { signInEmail, signInGoogle } = useAuth();
+  const { signInEmail, signUpEmail, signInGoogle } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("company");
@@ -55,6 +58,7 @@ export function SignupPage() {
   // Submit state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -106,6 +110,10 @@ export function SignupPage() {
     setSubmitting(true);
 
     try {
+      // 1. Create Firebase Auth user first (client-side)
+      await signUpEmail(email, password);
+
+      // 2. Create MySQL record via backend
       if (accountType === "company") {
         const res = await fetch(`${API_BASE}/companies`, {
           method: "POST",
@@ -154,7 +162,7 @@ export function SignupPage() {
         }
       }
 
-      // Sign in via Firebase after account creation
+      // 3. Create backend session (links Firebase UID → MySQL)
       const session = await signInEmail(email, password);
       navigate(session.targetRoute);
     } catch (err: unknown) {
@@ -170,6 +178,11 @@ export function SignupPage() {
 
   const handleStepOneSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setPhoneError("");
+    if (phone && !PHONE_REGEX.test(phone.replace(/[\s()-]/g, ""))) {
+      setPhoneError("Enter a valid phone number (10–15 digits, e.g. +91 98765 43210).");
+      return;
+    }
     setStep(2);
   };
 
@@ -395,13 +408,19 @@ export function SignupPage() {
                         placeholder={accountType === "company" ? "+91 98765 43210" : "+91 98765 43210"}
                         type="tel"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full rounded-full border border-border bg-card px-6 py-[18px] ps-11 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          setPhoneError("");
+                        }}
+                        className={`w-full rounded-full border bg-card px-6 py-[18px] ps-11 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors ${phoneError ? "border-destructive" : "border-border"}`}
                       />
                       <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
                         <PhoneIcon className="size-4" />
                       </div>
                     </div>
+                    {phoneError && (
+                      <p className="text-xs text-destructive px-6 pt-1">{phoneError}</p>
+                    )}
                   </div>
                 </div>
 

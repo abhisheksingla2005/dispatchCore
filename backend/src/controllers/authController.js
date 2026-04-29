@@ -64,10 +64,10 @@ const createSession = async (req, res, next) => {
       // Check companies first
       const company = await Company.findOne({ where: { email } });
       if (company) {
-        // Link Firebase UID if not already linked
-        if (!company.firebase_uid) {
-          await company.update({ firebase_uid: uid });
-        }
+        // TODO: re-enable after firebase_uid migration
+        // if (!company.firebase_uid) {
+        //   await company.update({ firebase_uid: uid });
+        // }
 
         await auth.setCustomUserClaims(uid, {
           role: 'company',
@@ -91,9 +91,10 @@ const createSession = async (req, res, next) => {
       // Check drivers
       const driver = await Driver.findOne({ where: { email } });
       if (driver) {
-        if (!driver.firebase_uid) {
-          await driver.update({ firebase_uid: uid });
-        }
+        // TODO: re-enable after firebase_uid migration
+        // if (!driver.firebase_uid) {
+        //   await driver.update({ firebase_uid: uid });
+        // }
 
         const isEmployed = driver.type === 'EMPLOYED' && !!driver.company_id;
         const driverType = isEmployed ? 'employed_driver' : 'independent_driver';
@@ -155,7 +156,7 @@ const createSession = async (req, res, next) => {
           type: 'INDEPENDENT',
           company_id: null,
           status: 'AVAILABLE',
-          firebase_uid: uid,
+          // firebase_uid: uid, // TODO: re-enable after migration
         });
 
         await auth.setCustomUserClaims(uid, {
@@ -188,7 +189,7 @@ const createSession = async (req, res, next) => {
         email,
         password: crypto.randomBytes(32).toString('hex'),
         location: '',
-        firebase_uid: uid,
+        // firebase_uid: uid, // TODO: re-enable after migration
       });
 
       await auth.setCustomUserClaims(uid, {
@@ -220,9 +221,10 @@ const createSession = async (req, res, next) => {
       // Check drivers first (most common phone login)
       const driver = await Driver.findOne({ where: { phone: normalizedPhone } });
       if (driver) {
-        if (!driver.firebase_uid) {
-          await driver.update({ firebase_uid: uid });
-        }
+        // TODO: re-enable after firebase_uid migration
+        // if (!driver.firebase_uid) {
+        //   await driver.update({ firebase_uid: uid });
+        // }
 
         const isEmployed = driver.type === 'EMPLOYED' && !!driver.company_id;
         const driverType = isEmployed ? 'employed_driver' : 'independent_driver';
@@ -259,9 +261,10 @@ const createSession = async (req, res, next) => {
       // Check companies
       const company = await Company.findOne({ where: { phone: normalizedPhone } });
       if (company) {
-        if (!company.firebase_uid) {
-          await company.update({ firebase_uid: uid });
-        }
+        // TODO: re-enable after firebase_uid migration
+        // if (!company.firebase_uid) {
+        //   await company.update({ firebase_uid: uid });
+        // }
 
         await auth.setCustomUserClaims(uid, {
           role: 'company',

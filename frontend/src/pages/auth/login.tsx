@@ -1,5 +1,7 @@
 import { useState, useEffect, Suspense, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useAutoTheme } from "@/hooks/app/useAutoTheme";
 import { useAuth } from "@/hooks/auth/useAuth";
 
@@ -36,6 +38,11 @@ export function AuthPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -95,6 +102,24 @@ export function AuthPage() {
   const handleLoginSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void handleEmailLogin();
+  };
+
+  const handlePasswordReset = async () => {
+    setResetError("");
+    if (!resetEmail) {
+      setResetError("Enter your email address.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail.trim());
+      setResetSent(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to send reset email.";
+      setResetError(msg.includes("user-not-found") ? "No account found with this email." : msg);
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   const handleRememberMeChange = (checked: boolean) => {
@@ -241,9 +266,13 @@ export function AuthPage() {
                   />
                   <span className="text-muted-foreground">Remember me</span>
                 </label>
-                <a href="#" className="text-sm text-primary hover:underline underline-offset-4 font-medium">
+                <button
+                  type="button"
+                  onClick={() => { setForgotMode(true); setResetEmail(email); setResetSent(false); setResetError(""); }}
+                  className="text-sm text-primary hover:underline underline-offset-4 font-medium"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
 
               {error && (
@@ -264,6 +293,77 @@ export function AuthPage() {
                 )}
               </button>
             </form>
+
+            {/* ── Forgot Password Modal ── */}
+            {forgotMode && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                <div className="w-full max-w-[420px] rounded-2xl border border-border bg-card p-6 space-y-4 shadow-xl">
+                  {resetSent ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <h2 className="text-lg font-bold">Check Your Email</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Password reset link sent to <span className="font-medium text-foreground">{resetEmail}</span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setForgotMode(false); setResetSent(false); }}
+                        className="w-full rounded-full bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Back to Login
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        <h2 className="text-lg font-bold">Reset Password</h2>
+                        <p className="text-sm text-muted-foreground">Enter your email and we'll send a reset link.</p>
+                      </div>
+                      <div className="relative">
+                        <input
+                          placeholder="you@example.com"
+                          type="email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") void handlePasswordReset(); }}
+                          className="w-full rounded-full border border-border bg-background px-6 py-[18px] ps-11 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+                        />
+                        <div className="text-muted-foreground pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+                          <AtSignIcon className="size-4" aria-hidden="true" />
+                        </div>
+                      </div>
+                      {resetError && (
+                        <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                          {resetError}
+                        </div>
+                      )}
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setForgotMode(false)}
+                          className="flex-1 rounded-full border border-border bg-card px-6 py-3.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handlePasswordReset()}
+                          disabled={resetLoading}
+                          className="flex-1 flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                        >
+                          {resetLoading ? (
+                            <><Loader2Icon className="size-4 animate-spin" /> Sending...</>
+                          ) : (
+                            "Send Reset Link"
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{" "}

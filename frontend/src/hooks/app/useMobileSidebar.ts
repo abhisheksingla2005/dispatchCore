@@ -13,11 +13,13 @@ const MOBILE_BREAKPOINT = 1024; // lg
 export function useMobileSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
 
-  // Close on route change
-  useEffect(() => {
+  // Close on route change (render-time state adjustment)
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
     setMobileOpen(false);
-  }, [location.pathname]);
+  }
 
   // Close when resized above breakpoint
   useEffect(() => {

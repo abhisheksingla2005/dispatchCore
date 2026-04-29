@@ -14,6 +14,7 @@ import {
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   type User,
@@ -79,6 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return createBackendSession();
   }, []);
 
+  const signUpEmail = useCallback(
+    async (email: string, password: string): Promise<void> => {
+      await createUserWithEmailAndPassword(auth, email, password);
+    },
+    [],
+  );
+
   const handleSignOut = useCallback(async () => {
     await auth.signOut();
     clearSessionStorage();
@@ -92,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         session,
         signInEmail,
+        signUpEmail,
         signInGoogle,
         signOut: handleSignOut,
       }}

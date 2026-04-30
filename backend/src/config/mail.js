@@ -17,11 +17,15 @@ if (env.smtp.host) {
     host: env.smtp.host,
     port: env.smtp.port,
     secure: env.smtp.secure,
+    requireTLS: !env.smtp.secure, // Enable STARTTLS when secure=false
     auth: {
       user: env.smtp.user,
       pass: env.smtp.pass,
     },
     family: 4, // Force IPv4 (required for Render)
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 } else {
   logger.warn('SMTP_HOST not configured — emails will be logged to console only');

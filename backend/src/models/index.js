@@ -40,6 +40,7 @@ const models = {
   DeliveryEvent: require('./DeliveryEvent')(sequelize),
   Message: require('./Message')(sequelize),
   SuperadminSetting: require('./SuperadminSetting')(sequelize),
+  EmailQuotaTracking: require('./EmailQuotaTracking')(sequelize),
 };
 
 // Setup associations

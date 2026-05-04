@@ -21,6 +21,12 @@ const logger = require('./config/logger');
 
 const app = express();
 
+// ── Trust Proxy ──
+// Set to 1 for Render and other reverse proxy environments
+// This tells Express to trust the first proxy in the chain (Render's load balancer)
+// express-rate-limit uses this to correctly identify client IP from X-Forwarded-For
+app.set('trust proxy', 1);
+
 // ── Security ──
 app.use(helmet());
 

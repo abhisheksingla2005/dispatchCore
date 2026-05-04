@@ -1,17 +1,23 @@
 /**
  * Mail Service
  *
- * Centralized email dispatch layer using Nodemailer.
+ * Centralized email dispatch layer using Resend.
  * All outgoing emails go through this service for consistent
- * logging, error handling, and template rendering.
+ * logging, error handling, quota enforcement, and template rendering.
  *
- * When SMTP is not configured (no SMTP_HOST), emails are logged
- * to console instead of being sent — safe for local development.
+ * Resend is an API-based email service with no SMTP port restrictions,
+ * making it ideal for platforms like Render. When RESEND_API_KEY is not
+ * configured, emails are logged to console instead — safe for local development.
+ *
+ * Quota enforcement prevents exceeding Resend free tier limits:
+ * - 100 emails/day
+ * - 3,000 emails/month
  */
 
-const { transporter } = require('../config/mail');
+const { client } = require('../config/mail');
 const env = require('../config/env');
 const logger = require('../config/logger');
+const { checkQuota, recordEmailSent } = require('./emailQuotaService');
 const verificationTemplate = require('../utils/emailTemplates/verificationTemplate');
 const orderBidTemplate = require('../utils/emailTemplates/orderBidTemplate');
 const orderAssignedTemplate = require('../utils/emailTemplates/orderAssignedTemplate');
@@ -19,31 +25,69 @@ const orderTrackingTemplate = require('../utils/emailTemplates/orderTrackingTemp
 const welcomeTemplate = require('../utils/emailTemplates/welcomeTemplate');
 
 /**
- * Send a raw email via the SMTP transport.
+ * Send a raw email via Resend with quota enforcement.
  *
  * @param {string|string[]} to - Recipient address(es)
  * @param {string} subject - Email subject line
  * @param {string} html - Rendered HTML content
- * @returns {Promise<object|null>} Nodemailer send result, or null if skipped
+ * @param {string} [idempotencyKey] - Optional idempotency key for safe retries
+ * @param {string} [emailType] - Email type for quota tracking (verification, bid, etc)
+ * @returns {Promise<object|null>} Resend response { data, error }, or null if skipped/blocked
+ * @throws {Error} If quota exceeded or email sending fails
  */
-const sendMail = async (to, subject, html) => {
-  if (!transporter) {
-    logger.info({ to, subject }, 'Email skipped — SMTP not configured');
+const sendMail = async (to, subject, html, idempotencyKey, emailType = 'unknown') => {
+  if (!client) {
+    logger.info({ to, subject }, 'Email skipped — Resend not configured');
     return null;
   }
 
+  // Check quota before sending
+  const quotaCheck = await checkQuota(emailType);
+  if (!quotaCheck.allowed) {
+    logger.warn(
+      {
+        to,
+        subject,
+        emailType,
+        reason: quotaCheck.reason,
+        dailyUsage: quotaCheck.dailyUsage,
+        monthlyUsage: quotaCheck.monthlyUsage,
+      },
+      'Email blocked — quota limit exceeded',
+    );
+    throw new Error(`Email quota exceeded: ${quotaCheck.reason}`);
+  }
+
   try {
-    const result = await transporter.sendMail({
-      from: env.smtp.from,
-      to: Array.isArray(to) ? to.join(', ') : to,
+    const { data, error } = await client.emails.send({
+      from: env.email.from,
+      to: Array.isArray(to) ? to : [to],
       subject,
       html,
+      ...(idempotencyKey && { idempotencyKey }),
     });
 
-    logger.info({ messageId: result.messageId, to }, 'Email sent');
-    return result;
+    if (error) {
+      logger.error({ err: error, to, subject, emailType }, 'Failed to send email via Resend');
+      throw new Error(error.message);
+    }
+
+    // Record successful send in quota
+    await recordEmailSent(emailType);
+
+    logger.info(
+      {
+        messageId: data.id,
+        to,
+        emailType,
+        dailyUsed: quotaCheck.dailyUsage + 1,
+        monthlyUsed: quotaCheck.monthlyUsage + 1,
+      },
+      'Email sent',
+    );
+    return data;
   } catch (error) {
-    logger.error({ err: error, to, subject }, 'Failed to send email');
+    logger.error({ err: error, to, subject, emailType }, 'Error sending email');
     throw error;
   }
 };
@@ -59,7 +103,8 @@ const sendVerificationEmail = async (user, verificationLink) => {
     name: user.name,
     verificationLink,
   });
-  return sendMail(user.email, subject, html);
+  const idempotencyKey = `verification/${user.email}`;
+  return sendMail(user.email, subject, html, idempotencyKey, 'verification');
 };
 
 /**
@@ -80,7 +125,8 @@ const sendBidUpdateEmail = async (driver, { orderId, bidAmount, status }) => {
     status,
     dashboardLink,
   });
-  return sendMail(driver.email, subject, html);
+  const idempotencyKey = `bid-update/${orderId}/${driver.email}`;
+  return sendMail(driver.email, subject, html, idempotencyKey, 'bid-update');
 };
 
 /**
@@ -102,7 +148,8 @@ const sendOrderAssignedEmail = async (driver, order) => {
     deliveryAddress: order.delivery_address || 'N/A',
     dashboardLink,
   });
-  return sendMail(driver.email, subject, html);
+  const idempotencyKey = `order-assigned/${order.id}/${driver.email}`;
+  return sendMail(driver.email, subject, html, idempotencyKey, 'order-assigned');
 };
 
 /**
@@ -129,7 +176,8 @@ const sendTrackingEmail = async (order) => {
     pickupAddress: order.pickup_address,
     deliveryAddress: order.delivery_address,
   });
-  return sendMail(order.recipient_email, subject, html);
+  const idempotencyKey = `tracking/${order.id}`;
+  return sendMail(order.recipient_email, subject, html, idempotencyKey, 'tracking');
 };
 
 /**
@@ -147,7 +195,8 @@ const sendWelcomeEmail = async (user, accountType) => {
     accountType,
     dashboardLink,
   });
-  return sendMail(user.email, subject, html);
+  const idempotencyKey = `welcome/${user.email}`;
+  return sendMail(user.email, subject, html, idempotencyKey, 'welcome');
 };
 
 module.exports = {

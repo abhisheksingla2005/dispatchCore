@@ -149,16 +149,31 @@ const createSession = async (req, res, next) => {
 
       if (isPersonalEmail) {
         // Register as independent driver
-        const newDriver = await Driver.create({
-          name: displayName,
-          email,
-          phone: firebaseUser.phoneNumber || null,
-          password_hash: crypto.randomBytes(32).toString('hex'),
-          type: 'INDEPENDENT',
-          company_id: null,
-          status: 'AVAILABLE',
-          // firebase_uid: uid, // TODO: re-enable after migration
-        });
+        // Handle race condition: if two requests create simultaneously, second one will fail unique constraint
+        let newDriver;
+        try {
+          newDriver = await Driver.create({
+            name: displayName,
+            email,
+            phone: firebaseUser.phoneNumber || null,
+            password_hash: crypto.randomBytes(32).toString('hex'),
+            type: 'INDEPENDENT',
+            company_id: null,
+            status: 'AVAILABLE',
+            // firebase_uid: uid, // TODO: re-enable after migration
+          });
+        } catch (createError) {
+          // Handle unique constraint violation from race condition
+          if (createError.name === 'SequelizeUniqueConstraintError' && createError.fields?.email) {
+            logger.debug({ email }, 'Race condition: Driver already created, fetching existing');
+            newDriver = await Driver.findOne({ where: { email } });
+            if (!newDriver) {
+              throw createError; // If still not found, original error is real
+            }
+          } else {
+            throw createError;
+          }
+        }
 
         await auth.setCustomUserClaims(uid, {
           role: 'independent_driver',
@@ -193,13 +208,27 @@ const createSession = async (req, res, next) => {
 
       // Company/custom domain → register as company
       const companyNameFromDomain = domain.split('.')[0];
-      const newCompany = await Company.create({
-        name: displayName,
-        email,
-        password: crypto.randomBytes(32).toString('hex'),
-        location: '',
-        // firebase_uid: uid, // TODO: re-enable after migration
-      });
+      let newCompany;
+      try {
+        newCompany = await Company.create({
+          name: displayName,
+          email,
+          password: crypto.randomBytes(32).toString('hex'),
+          location: '',
+          // firebase_uid: uid, // TODO: re-enable after migration
+        });
+      } catch (createError) {
+        // Handle unique constraint violation from race condition
+        if (createError.name === 'SequelizeUniqueConstraintError' && createError.fields?.email) {
+          logger.debug({ email }, 'Race condition: Company already created, fetching existing');
+          newCompany = await Company.findOne({ where: { email } });
+          if (!newCompany) {
+            throw createError; // If still not found, original error is real
+          }
+        } else {
+          throw createError;
+        }
+      }
 
       await auth.setCustomUserClaims(uid, {
         role: 'company',

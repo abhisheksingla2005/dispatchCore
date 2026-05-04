@@ -73,15 +73,8 @@ const envSchema = Joi.object({
         .uri({ scheme: ['https'] })
         .required(),
 
-    // Email (Nodemailer SMTP)
-    SMTP_HOST: Joi.string().default(''),
-    SMTP_PORT: Joi.number().default(465),
-    SMTP_SECURE: Joi.boolean()
-        .truthy('true', '1')
-        .falsy('false', '0')
-        .default(true),
-    SMTP_USER: Joi.string().allow('').default(''),
-    SMTP_PASS: Joi.string().allow('').default(''),
+    // Email (Resend)
+    RESEND_API_KEY: Joi.string().allow('').default(''),
     EMAIL_FROM: Joi.string().default('dispatchCore <noreply@dispatchcore.com>'),
 })
     .unknown() // Allow other system env vars
@@ -134,12 +127,8 @@ module.exports = {
         serviceAccountPath: envVars.FIREBASE_SERVICE_ACCOUNT_PATH,
         databaseUrl: envVars.FIREBASE_DATABASE_URL,
     },
-    smtp: {
-        host: envVars.SMTP_HOST,
-        port: envVars.SMTP_PORT,
-        secure: envVars.SMTP_SECURE,
-        user: envVars.SMTP_USER,
-        pass: envVars.SMTP_PASS,
+    email: {
+        apiKey: envVars.RESEND_API_KEY,
         from: envVars.EMAIL_FROM,
     },
 };

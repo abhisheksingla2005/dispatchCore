@@ -1,56 +1,42 @@
 /**
- * Mail Configuration (Nodemailer)
+ * Email Configuration (Resend)
  *
- * Creates and exports a reusable SMTP transport.
- * Falls back to a no-op transport when SMTP_HOST is not configured,
- * allowing the server to boot without email credentials during local dev.
+ * Creates and exports a reusable Resend client for sending emails.
+ * Resend is an API-based email service designed for production environments,
+ * with no SMTP port issues on platforms like Render.
  */
 
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const env = require('./env');
 const logger = require('./logger');
 
-let transporter = null;
+let client = null;
 
-if (env.smtp.host) {
-  transporter = nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure,
-    requireTLS: !env.smtp.secure, // Enable STARTTLS when secure=false
-    auth: {
-      user: env.smtp.user,
-      pass: env.smtp.pass,
-    },
-    family: 4, // Force IPv4 (required for Render)
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-  });
+if (env.email.apiKey) {
+  client = new Resend(env.email.apiKey);
 } else {
-  logger.warn('SMTP_HOST not configured — emails will be logged to console only');
+  logger.warn('RESEND_API_KEY not configured — emails will be logged to console only');
 }
 
 /**
- * Verify the SMTP connection is working.
- * Call during server startup for early failure detection.
+ * Verify the Resend client is ready.
+ * Called during server startup for early failure detection.
  *
- * @returns {Promise<boolean>} true if connected, false otherwise
+ * @returns {Promise<boolean>} true if configured, false otherwise
  */
 const verifyConnection = async () => {
-  if (!transporter) {
-    logger.warn('Mail transporter not initialized — skipping verify');
+  if (!client) {
+    logger.warn('Resend client not initialized — skipping verification');
     return false;
   }
 
   try {
-    await transporter.verify();
-    logger.info('SMTP connection verified');
+    logger.info('Resend client initialized and ready');
     return true;
   } catch (error) {
-    logger.error({ err: error }, 'SMTP connection verification failed');
+    logger.error({ err: error }, 'Resend client initialization failed');
     return false;
   }
 };
 
-module.exports = { transporter, verifyConnection };
+module.exports = { client, verifyConnection };

@@ -7,11 +7,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" as="style" />
-    <link rel="preload" href="/hero-poster.jpg" as="image" />
+    <link rel="preload" href="/hero-poster.jpg" as="image" imagesrcset="/hero-poster.jpg 1920w" imagesizes="100vw" />
     <link
       href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
     <title>dispatchCore — Delivery Logistics, Reimagined</title>
     <meta name="description" content="Real-time delivery management platform for last-mile logistics. Dispatch, track, and optimize your fleet with dispatchCore." />
   </head>

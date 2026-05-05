@@ -21,7 +21,7 @@ import LoadingPackage from "@/components/ui/loading-package";
 import { fetchShipments } from "@/services/dispatcher/dashboard";
 import type { Shipment } from "@/types/dispatcher/dashboard";
 import { AddressInput } from "@/components/forms/AddressInput";
-import { API_BASE } from "@/lib/api";
+import { API_BASE, post } from "@/lib/api";
 
 /* ─── Status Config ─── */
 type OrderStatus = "Pending" | "Shipping" | "Delivered";
@@ -81,7 +81,7 @@ export default function OrdersPage() {
   });
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderError, setOrderError] = useState("");
-  const [createdTrackingLink, setCreatedTrackingLink] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState("");
 
   useEffect(() => {
     loadOrders();
@@ -183,7 +183,11 @@ export default function OrdersPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateOrder(true)}
+              onClick={() => {
+                setShowCreateOrder(true);
+                setOrderError("");
+                setOrderSuccess("");
+              }}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -412,6 +416,7 @@ export default function OrdersPage() {
                 onClick={() => {
                   setShowCreateOrder(false);
                   setOrderError("");
+                  setOrderSuccess("");
                 }}
                 className="p-1.5 rounded-lg hover:bg-secondary text-gray-400"
               >
@@ -424,6 +429,11 @@ export default function OrdersPage() {
               {orderError && (
                 <div className="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
                   {orderError}
+                </div>
+              )}
+              {orderSuccess && (
+                <div className="p-3 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm">
+                  {orderSuccess}
                 </div>
               )}
 
@@ -591,6 +601,7 @@ export default function OrdersPage() {
                 onClick={() => {
                   setShowCreateOrder(false);
                   setOrderError("");
+                  setOrderSuccess("");
                 }}
                 className="px-4 py-2.5 rounded-full text-sm font-medium text-secondary-foreground hover:bg-secondary transition-colors"
               >
@@ -613,51 +624,29 @@ export default function OrdersPage() {
                   }
                   setOrderSubmitting(true);
                   try {
-                    const companyId =
-                      localStorage.getItem("dc_company_id") || "";
-                    const res = await fetch(`${API_BASE}/orders`, {
-                      method: "POST",
-                      credentials: "include",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "x-company-id": companyId,
-                      },
-                      body: JSON.stringify({
-                        pickup_lat: parseFloat(orderForm.pickup_lat),
-                        pickup_lng: parseFloat(orderForm.pickup_lng),
-                        pickup_address: orderForm.pickup_address || undefined,
-                        delivery_lat: parseFloat(orderForm.delivery_lat),
-                        delivery_lng: parseFloat(orderForm.delivery_lng),
-                        delivery_address:
-                          orderForm.delivery_address || undefined,
-                        priority: orderForm.priority,
-                        weight_kg: orderForm.weight_kg
-                          ? parseFloat(orderForm.weight_kg)
-                          : undefined,
-                        notes: orderForm.notes || undefined,
-                        recipient_name: orderForm.recipient_name || undefined,
-                        recipient_phone: orderForm.recipient_phone || undefined,
-                        recipient_email: orderForm.recipient_email || undefined,
-                      }),
+                    await post("/orders", {
+                      pickup_lat: parseFloat(orderForm.pickup_lat),
+                      pickup_lng: parseFloat(orderForm.pickup_lng),
+                      pickup_address: orderForm.pickup_address || undefined,
+                      delivery_lat: parseFloat(orderForm.delivery_lat),
+                      delivery_lng: parseFloat(orderForm.delivery_lng),
+                      delivery_address:
+                        orderForm.delivery_address || undefined,
+                      priority: orderForm.priority,
+                      weight_kg: orderForm.weight_kg
+                        ? parseFloat(orderForm.weight_kg)
+                        : undefined,
+                      notes: orderForm.notes || undefined,
+                      recipient_name: orderForm.recipient_name || undefined,
+                      recipient_phone: orderForm.recipient_phone || undefined,
+                      recipient_email: orderForm.recipient_email || undefined,
                     });
-                    const data = await res.json();
-                    if (!res.ok) {
-                      const details = data.error?.details;
-                      if (details && details.length > 0) {
-                        throw new Error(
-                          details
-                            .map(
-                              (d: { field: string; message: string }) =>
-                                `${d.field}: ${d.message}`,
-                            )
-                            .join(", "),
-                        );
-                      }
-                      throw new Error(
-                        data.error?.message || "Failed to create order",
-                      );
-                    }
                     setShowCreateOrder(false);
+                    setOrderSuccess(
+                      orderForm.recipient_email
+                        ? "Order created. Tracking email sent to recipient."
+                        : "Order created.",
+                    );
                     setOrderForm({
                       pickup_address: "",
                       pickup_lat: "",
@@ -672,12 +661,6 @@ export default function OrdersPage() {
                       recipient_phone: "",
                       recipient_email: "",
                     });
-                    // Show tracking link
-                    const trackingCode = data.data?.tracking_code;
-                    if (trackingCode) {
-                      const link = `${window.location.origin}/track/${trackingCode}`;
-                      setCreatedTrackingLink(link);
-                    }
                     loadOrders();
                   } catch (err: unknown) {
                     setOrderError(
@@ -828,8 +811,8 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* ─── Tracking Link Toast ─── */}
-      {createdTrackingLink && (
+      {/* ─── Order Created Toast ─── */}
+      {orderSuccess && (
         <div className="fixed bottom-6 right-6 z-50 bg-card rounded-3xl border border-border shadow-2xl p-5 max-w-sm">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
@@ -837,30 +820,13 @@ export default function OrdersPage() {
               Order Created!
             </h3>
             <button
-              onClick={() => setCreatedTrackingLink("")}
+              onClick={() => setOrderSuccess("")}
               className="p-1 rounded-lg hover:bg-secondary text-gray-400"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">
-            Share this tracking link with the recipient:
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              readOnly
-              value={createdTrackingLink}
-              className="flex-1 px-3 py-2 rounded-full border border-border bg-muted text-xs text-foreground"
-            />
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(createdTrackingLink);
-              }}
-              className="px-3 py-2 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
-            >
-              Copy
-            </button>
-          </div>
+          <p className="text-xs text-muted-foreground">{orderSuccess}</p>
         </div>
       )}
     </div>

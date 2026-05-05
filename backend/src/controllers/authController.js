@@ -151,6 +151,7 @@ const createSession = async (req, res, next) => {
         // Register as independent driver
         // Handle race condition: if two requests create simultaneously, second one will fail unique constraint
         let newDriver;
+        let isNewDriver = true;
         try {
           newDriver = await Driver.create({
             name: displayName,
@@ -170,6 +171,7 @@ const createSession = async (req, res, next) => {
             if (!newDriver) {
               throw createError; // If still not found, original error is real
             }
+            isNewDriver = false; // Mark as existing driver
           } else {
             throw createError;
           }
@@ -183,13 +185,15 @@ const createSession = async (req, res, next) => {
 
         logger.info({ uid, email, driverId: newDriver.id }, 'Auto-registered personal email as independent driver');
 
-        // Send welcome email (fire-and-forget)
-        mailService.sendWelcomeEmail(
-          { name: newDriver.name, email: newDriver.email },
-          'driver',
-        ).catch((err) => {
-          logger.error({ err, driverId: newDriver.id }, 'Failed to send welcome email');
-        });
+        // Send welcome email only on true creation (fire-and-forget)
+        if (isNewDriver) {
+          mailService.sendWelcomeEmail(
+            { name: newDriver.name, email: newDriver.email },
+            'driver',
+          ).catch((err) => {
+            logger.error({ err, driverId: newDriver.id }, 'Failed to send welcome email');
+          });
+        }
 
         return success(res, {
           accountType: 'independent_driver',
@@ -209,6 +213,7 @@ const createSession = async (req, res, next) => {
       // Company/custom domain → register as company
       const companyNameFromDomain = domain.split('.')[0];
       let newCompany;
+      let isNewCompany = true;
       try {
         newCompany = await Company.create({
           name: displayName,
@@ -225,6 +230,7 @@ const createSession = async (req, res, next) => {
           if (!newCompany) {
             throw createError; // If still not found, original error is real
           }
+          isNewCompany = false; // Mark as existing company
         } else {
           throw createError;
         }
@@ -238,13 +244,15 @@ const createSession = async (req, res, next) => {
 
       logger.info({ uid, email, companyId: newCompany.id, domain }, 'Auto-registered company domain user');
 
-      // Send welcome email (fire-and-forget)
-      mailService.sendWelcomeEmail(
-        { name: newCompany.name, email: newCompany.email },
-        'company',
-      ).catch((err) => {
-        logger.error({ err, companyId: newCompany.id }, 'Failed to send welcome email');
-      });
+      // Send welcome email only on true creation (fire-and-forget)
+      if (isNewCompany) {
+        mailService.sendWelcomeEmail(
+          { name: newCompany.name, email: newCompany.email },
+          'company',
+        ).catch((err) => {
+          logger.error({ err, companyId: newCompany.id }, 'Failed to send welcome email');
+        });
+      }
 
       return success(res, {
         accountType: 'company',

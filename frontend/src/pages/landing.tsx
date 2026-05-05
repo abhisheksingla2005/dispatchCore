@@ -35,16 +35,16 @@ type Direction = "up" | "down" | "left" | "right" | "scale";
 
 const directionMap: Record<
   Direction,
-  { opacity: number; x?: number; y?: number; scale?: number; filter?: string }
+  { opacity: number; x?: number; y?: number; scale?: number }
 > = {
-  up: { opacity: 0, y: 40, filter: "blur(6px)" },
-  down: { opacity: 0, y: -40, filter: "blur(6px)" },
-  left: { opacity: 0, x: -50, filter: "blur(8px)" },
-  right: { opacity: 0, x: 50, filter: "blur(8px)" },
-  scale: { opacity: 0, scale: 0.88, filter: "blur(10px)" },
+  up: { opacity: 0, y: 40 },
+  down: { opacity: 0, y: -40 },
+  left: { opacity: 0, x: -50 },
+  right: { opacity: 0, x: 50 },
+  scale: { opacity: 0, scale: 0.88 },
 };
 
-const revealTarget = { opacity: 1, x: 0, y: 0, scale: 1, filter: "blur(0px)" };
+const revealTarget = { opacity: 1, x: 0, y: 0, scale: 1 };
 
 /* ─── Reusable: Section Reveal ─── */
 function Reveal({
@@ -70,7 +70,6 @@ function Reveal({
         duration: 0.9,
         delay,
         ease: [0.16, 1, 0.3, 1],
-        filter: { duration: 0.6 },
       }}
       className={className}
       style={{ willChange: "transform, opacity, filter" }}
@@ -98,15 +97,15 @@ function WordReveal({
       {words.map((word, i) => (
         <motion.span
           key={`${word}-${i}`}
-          initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
-          animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
+          initial={{ opacity: 0, y: 24 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{
             duration: 0.6,
             delay: delayStart + i * 0.08,
             ease: [0.16, 1, 0.3, 1],
           }}
           className="inline-block mr-[0.28em]"
-          style={{ willChange: "transform, opacity, filter" }}
+          style={{ willChange: "transform, opacity" }}
         >
           {word}
         </motion.span>
@@ -299,7 +298,9 @@ function HeroSection() {
             initial={{ scale: 1.12, opacity: 0 }}
             animate={videoReady ? { scale: 1, opacity: 1 } : { scale: 1.12, opacity: 0 }}
             transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
-          />
+          >
+            <track kind="captions" src="/hero-captions.vtt" srcLang="en" label="English" />
+          </motion.video>
         </>
       )}
       {/* Overlays for video (desktop only) */}
@@ -333,8 +334,8 @@ function HeroSection() {
           <div className="max-w-3xl p-2 md:p-4">
             {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
-              animate={inView ? { opacity: 0.7, y: 0, filter: "blur(0px)" } : {}}
+              initial={{ opacity: 0, y: 16 }}
+              animate={inView ? { opacity: 0.7, y: 0 } : {}}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-white"
             >
@@ -348,8 +349,8 @@ function HeroSection() {
 
             {/* Description with blur-in */}
             <motion.p
-              initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
-              animate={inView ? { opacity: 0.76, y: 0, filter: "blur(0px)" } : {}}
+              initial={{ opacity: 0, y: 20 }}
+              animate={inView ? { opacity: 0.76, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="mt-5 max-w-2xl text-sm leading-relaxed text-white md:text-base"
             >
@@ -841,7 +842,7 @@ function TestimonialSection() {
 
           {/* Quote carousel */}
           <div className="lg:col-span-3">
-            <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-4">
+            <p className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
               What people say
             </p>
 
@@ -888,15 +889,16 @@ function TestimonialSection() {
             </div>
 
             {/* Dot indicators */}
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-3 mt-6">
               {testimonials.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActive(i)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  aria-label={`Go to slide ${i + 1}`}
+                  className={`h-3 rounded-full transition-all duration-300 ${
                     i === active
-                      ? "w-6 bg-primary"
-                      : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      ? "w-8 bg-primary"
+                      : "w-3 bg-muted-foreground/30 hover:bg-muted-foreground/50"
                   }`}
                 />
               ))}
@@ -1029,7 +1031,7 @@ function CenteredCTA() {
                   to="/contact"
                   className="group inline-flex items-center gap-2 px-8 py-4 text-sm font-medium bg-foreground text-background rounded-full hover:bg-foreground/90 transition-colors"
                 >
-                  Learn More
+                  Contact dispatchCore
                   <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                 </Link>
               </Reveal>

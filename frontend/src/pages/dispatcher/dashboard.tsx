@@ -9,7 +9,7 @@ import {
 import type { Shipment, ShipmentStatus } from "@/types/dispatcher/dashboard";
 import MapView from "@/components/map/MapView";
 import type { MapMarker, MapRoute } from "@/components/map/MapView";
-import { API_BASE, get } from "@/lib/api";
+import { API_BASE, get, post } from "@/lib/api";
 import { fetchDrivingRoute } from "@/lib/directions";
 import { buildCurvedRoute } from "@/lib/map-routes";
 import {
@@ -20,7 +20,6 @@ import {
   Truck,
   Clock,
   CheckCircle2,
-  ExternalLink,
   ArrowRight,
   Loader2,
   X,
@@ -78,7 +77,7 @@ export default function DashboardPage() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateOrder, setShowCreateOrder] = useState(false);
-  const [createdTrackingLink, setCreatedTrackingLink] = useState("");
+  const [orderSuccess, setOrderSuccess] = useState("");
   const [orderForm, setOrderForm] = useState({
     pickup_address: "",
     pickup_lat: "",
@@ -405,7 +404,11 @@ export default function DashboardPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateOrder(true)}
+              onClick={() => {
+                setShowCreateOrder(true);
+                setOrderError("");
+                setOrderSuccess("");
+              }}
               className="shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
             >
               <Plus className="h-4 w-4" />
@@ -712,12 +715,12 @@ export default function DashboardPage() {
                         </td>
                         <td className="p-4">
                           <span className="text-sm text-secondary-foreground">
-                            {s.courierIcon} {s.courier}
+                            {s.courier}
                           </span>
                         </td>
                         <td className="p-4">
                           <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
-                            {s.categoryEmoji} {s.category}
+                            {s.category}
                           </span>
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">
@@ -736,7 +739,7 @@ export default function DashboardPage() {
                         <td className="p-4 text-sm font-medium text-foreground">
                           {s.payment}
                         </td>
-                        <td className="p-4">
+                        <td className="p-2">
                           <span
                             className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[s.status]}`}
                           >
@@ -849,6 +852,7 @@ export default function DashboardPage() {
                 onClick={() => {
                   setShowCreateOrder(false);
                   setOrderError("");
+                  setOrderSuccess("");
                 }}
                 className="p-1.5 rounded-lg hover:bg-secondary text-gray-400"
               >
@@ -861,6 +865,11 @@ export default function DashboardPage() {
               {orderError && (
                 <div className="p-3 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
                   {orderError}
+                </div>
+              )}
+              {orderSuccess && (
+                <div className="p-3 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm">
+                  {orderSuccess}
                 </div>
               )}
 
@@ -1028,6 +1037,7 @@ export default function DashboardPage() {
                 onClick={() => {
                   setShowCreateOrder(false);
                   setOrderError("");
+                  setOrderSuccess("");
                 }}
                 className="px-4 py-2.5 rounded-full text-sm font-medium text-secondary-foreground hover:bg-secondary transition-colors"
               >
@@ -1050,51 +1060,29 @@ export default function DashboardPage() {
                   }
                   setOrderSubmitting(true);
                   try {
-                    const companyId =
-                      localStorage.getItem("dc_company_id") || "";
-                    const res = await fetch(`${API_BASE}/orders`, {
-                      method: "POST",
-                      credentials: "include",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "x-company-id": companyId,
-                      },
-                      body: JSON.stringify({
-                        pickup_lat: parseFloat(orderForm.pickup_lat),
-                        pickup_lng: parseFloat(orderForm.pickup_lng),
-                        pickup_address: orderForm.pickup_address || undefined,
-                        delivery_lat: parseFloat(orderForm.delivery_lat),
-                        delivery_lng: parseFloat(orderForm.delivery_lng),
-                        delivery_address:
-                          orderForm.delivery_address || undefined,
-                        priority: orderForm.priority,
-                        weight_kg: orderForm.weight_kg
-                          ? parseFloat(orderForm.weight_kg)
-                          : undefined,
-                        notes: orderForm.notes || undefined,
-                        recipient_name: orderForm.recipient_name || undefined,
-                        recipient_phone: orderForm.recipient_phone || undefined,
-                        recipient_email: orderForm.recipient_email || undefined,
-                      }),
+                    await post("/orders", {
+                      pickup_lat: parseFloat(orderForm.pickup_lat),
+                      pickup_lng: parseFloat(orderForm.pickup_lng),
+                      pickup_address: orderForm.pickup_address || undefined,
+                      delivery_lat: parseFloat(orderForm.delivery_lat),
+                      delivery_lng: parseFloat(orderForm.delivery_lng),
+                      delivery_address:
+                        orderForm.delivery_address || undefined,
+                      priority: orderForm.priority,
+                      weight_kg: orderForm.weight_kg
+                        ? parseFloat(orderForm.weight_kg)
+                        : undefined,
+                      notes: orderForm.notes || undefined,
+                      recipient_name: orderForm.recipient_name || undefined,
+                      recipient_phone: orderForm.recipient_phone || undefined,
+                      recipient_email: orderForm.recipient_email || undefined,
                     });
-                    const data = await res.json();
-                    if (!res.ok) {
-                      const details = data.error?.details;
-                      if (details && details.length > 0) {
-                        throw new Error(
-                          details
-                            .map(
-                              (d: { field: string; message: string }) =>
-                                `${d.field}: ${d.message}`,
-                            )
-                            .join(", "),
-                        );
-                      }
-                      throw new Error(
-                        data.error?.message || "Failed to create order",
-                      );
-                    }
                     setShowCreateOrder(false);
+                    setOrderSuccess(
+                      orderForm.recipient_email
+                        ? "Order created. Tracking email sent to recipient."
+                        : "Order created.",
+                    );
                     setOrderForm({
                       pickup_address: "",
                       pickup_lat: "",
@@ -1109,12 +1097,6 @@ export default function DashboardPage() {
                       recipient_phone: "",
                       recipient_email: "",
                     });
-                    // Show tracking link
-                    const trackingCode = data.data?.tracking_code;
-                    if (trackingCode) {
-                      const link = `${window.location.origin}/track/${trackingCode}`;
-                      setCreatedTrackingLink(link);
-                    }
                     refetch();
                   } catch (err: unknown) {
                     setOrderError(
@@ -1262,8 +1244,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ─── Tracking Link Success Modal ─── */}
-      {createdTrackingLink && (
+      {/* ─── Order Created Success Modal ─── */}
+      {orderSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-secondary rounded-3xl border border-border shadow-2xl w-full max-w-md mx-4 p-6 text-center">
             <div className="h-14 w-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
@@ -1273,42 +1255,14 @@ export default function DashboardPage() {
               Order Created Successfully!
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Share this tracking link with the customer to track their delivery
-              in real-time.
+              {orderSuccess}
             </p>
-            <div className="flex items-center gap-2 bg-muted border border-border rounded-full px-4 py-3 mb-4">
-              <input
-                readOnly
-                value={createdTrackingLink}
-                className="flex-1 bg-transparent text-sm text-foreground outline-none font-mono"
-              />
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(createdTrackingLink);
-                }}
-                className="shrink-0 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
-              >
-                Copy
-              </button>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCreatedTrackingLink("")}
-                className="flex-1 px-4 py-2.5 rounded-full text-sm font-medium text-secondary-foreground hover:bg-secondary transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  window.open(createdTrackingLink, "_blank");
-                  setCreatedTrackingLink("");
-                }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Open Tracking
-              </button>
-            </div>
+            <button
+              onClick={() => setOrderSuccess("")}
+              className="w-full px-4 py-2.5 rounded-full text-sm font-medium text-secondary-foreground hover:bg-secondary transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

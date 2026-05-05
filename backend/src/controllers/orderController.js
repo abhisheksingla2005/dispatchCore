@@ -50,6 +50,12 @@ const createOrder = async (req, res, next) => {
       recipient_email: recipient_email || null,
     });
 
+    if (order.recipient_email) {
+      mailService.sendTrackingEmail(order).catch((err) => {
+        logger.error({ err, orderId: order.id }, 'Failed to send tracking email');
+      });
+    }
+
     return success(res, order, null, 201);
   } catch (error) {
     next(error);
@@ -277,13 +283,6 @@ const updateOrderStatus = async (req, res, next) => {
         assignment_id: orderAssignment.id,
         event_type: status,
         timestamp: new Date(),
-      });
-    }
-
-    // Send tracking email to recipient when picked up
-    if (status === 'PICKED_UP' && order.recipient_email) {
-      mailService.sendTrackingEmail(order).catch((err) => {
-        logger.error({ err, orderId: order.id }, 'Failed to send tracking email');
       });
     }
 

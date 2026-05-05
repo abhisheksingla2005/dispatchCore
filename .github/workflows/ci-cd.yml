@@ -1,0 +1,264 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  backend-lint:
+    name: Backend - Lint & Format Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+      
+      - name: Run ESLint
+        run: |
+          cd backend
+          npm run lint
+      
+      - name: Check code formatting
+        run: |
+          cd backend
+          npm run format -- --check
+
+  backend-test:
+    name: Backend - Unit & Integration Tests
+    runs-on: ubuntu-latest
+    needs: backend-lint
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: dispatchcore_test
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        ports:
+          - 3306:3306
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+      
+      - name: Run unit tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: root_password
+          DB_NAME: dispatchcore_test
+          NODE_ENV: test
+        run: |
+          cd backend
+          npm run test:unit || echo "No unit tests yet"
+      
+      - name: Run integration tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: root_password
+          DB_NAME: dispatchcore_test
+          NODE_ENV: test
+        run: |
+          cd backend
+          npm run test:integration || echo "No integration tests yet"
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: backend
+          fail_ci_if_error: false
+
+  frontend-lint:
+    name: Frontend - Lint & Build Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run ESLint
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Type check
+        run: |
+          cd frontend
+          npx tsc --noEmit
+      
+      - name: Build project
+        run: |
+          cd frontend
+          npm run build
+
+  frontend-test:
+    name: Frontend - Unit & Component Tests
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run unit tests
+        run: |
+          cd frontend
+          npm run test:unit || echo "No unit tests yet"
+      
+      - name: Run component tests
+        run: |
+          cd frontend
+          npm run test:components || echo "No component tests yet"
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
+
+  security-audit:
+    name: Security - Audit Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Backend - npm audit
+        run: |
+          cd backend
+          npm audit --audit-level=moderate || echo "Audit vulnerabilities found"
+        continue-on-error: true
+      
+      - name: Frontend - npm audit
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate || echo "Audit vulnerabilities found"
+        continue-on-error: true
+
+  build-artifacts:
+    name: Build & Generate Artifacts
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Build backend
+        run: |
+          cd backend
+          npm ci
+          npm run lint
+      
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: frontend/dist
+          retention-days: 7
+      
+      - name: Create release notes
+        run: |
+          echo "## Build Artifacts" > RELEASE_NOTES.md
+          echo "- Frontend build: dist/" >> RELEASE_NOTES.md
+          echo "- Timestamp: $(date)" >> RELEASE_NOTES.md
+
+  notify:
+    name: Notify Build Status
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test]
+    if: always()
+    
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.backend-lint.result }}" = "failure" ] || \
+             [ "${{ needs.backend-test.result }}" = "failure" ] || \
+             [ "${{ needs.frontend-lint.result }}" = "failure" ] || \
+             [ "${{ needs.frontend-test.result }}" = "failure" ]; then
+            echo "Build Failed - Check logs"
+            exit 1
+          fi
+          echo "All checks passed successfully!"

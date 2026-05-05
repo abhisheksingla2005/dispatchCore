@@ -11,7 +11,12 @@
     "lint:fix": "eslint src/ --ext .js --fix",
     "format": "prettier --write \"src/**/*.js\" \"server.js\"",
     "db:migrate": "npx sequelize-cli db:migrate",
-    "db:migrate:undo": "npx sequelize-cli db:migrate:undo"
+    "db:migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "test": "jest --coverage",
+    "test:unit": "jest src/__tests__/unit --coverage",
+    "test:integration": "jest src/__tests__/integration --coverage",
+    "test:watch": "jest --watch",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
   },
   "type": "commonjs",
   "dependencies": {
@@ -34,8 +39,10 @@
   },
   "devDependencies": {
     "eslint": "^10.0.2",
+    "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.1",
-    "sequelize-cli": "^6.6.5"
+    "sequelize-cli": "^6.6.5",
+    "supertest": "^7.2.2"
   }
 }

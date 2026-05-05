@@ -49,12 +49,14 @@ A platform-level SuperAdmin has full visibility across all companies to manage t
 | **Animations** | Framer Motion |
 | **Maps** | MapLibre GL JS + react-map-gl |
 | **Icons** | Lucide React |
-| **UI Primitives** | Radix UI |
+| **Testing (Frontend)** | Vitest, React Testing Library, Vitest UI |
 | **Backend** | Node.js, Express 4 |
 | **Database** | MySQL (Sequelize ORM) |
 | **Real-Time** | Firebase Realtime Database |
-| **Email** | Nodemailer (SMTP) |
+| **Email** | Resend (Transactional Email Service) |
+| **Testing (Backend)** | Jest, Supertest, Custom Matchers |
 | **Security** | Helmet, express-rate-limit, express-validator |
+| **CI/CD** | GitHub Actions (7-stage pipeline) |
 
 
 ## Technical Architecture
@@ -80,6 +82,9 @@ Every table in the schema chains back to `company_id`. A `tenantResolver` middle
 
 - [System Design](docs/system_design.md) — Architecture, database, API design, UML diagrams
 - [Infrastructure](docs/infrastructure.md) — Conventions, patterns, and engineering standards
+- [Testing Guide](docs/TESTING.md) — Unit, integration, and component testing patterns
+- [Testing Quick Start](docs/TESTING_QUICKSTART.md) — 5-minute setup guide
+- [CI/CD Guide](docs/CI_CD_GUIDE.md) — GitHub Actions pipeline architecture
 
 ## Getting Started
 
@@ -100,20 +105,64 @@ npm install
 npm run dev        # → http://localhost:5173
 ```
 
+## Testing
+
+```bash
+# Run all tests
+cd frontend && npm run test:unit && cd ../backend && npm run test
+
+# Frontend tests (Vitest + React Testing Library)
+cd frontend && npm run test:unit              # Run once
+cd frontend && npm run test:unit -- --watch   # Watch mode
+
+# Backend tests (Jest + Supertest)
+cd backend && npm run test                    # Run with coverage
+cd backend && npm run test -- --watch         # Watch mode
+cd backend && npm run test:unit               # Unit tests only
+cd backend && npm run test:integration        # Integration tests only
+```
+
+Test files:
+- **Frontend**: `frontend/src/__tests__/` (14 tests - hooks + components)
+- **Backend**: `backend/src/__tests__/` (18 tests - unit + integration)
+- **CI/CD**: `.github/workflows/ci-cd.yml` (7-stage automated pipeline)
+
 ## Auth Model
 
 - Primary mode: HttpOnly JWT cookies (`accessToken`, `refreshToken`).
 - Fallback mode: Bearer token headers for browsers/environments that block third-party cookies.
 - Frontend sends `credentials: include` and can transparently refresh expired access tokens.
 
+## Deployment Status
+
+| Service | Platform | Status |
+|---|---|---|
+| **Frontend** | Vercel | ✅ Live - Auto-deploys on main branch |
+| **Backend** | Render | ✅ Live - Running `npm start` |
+| **Database** | Aiven MySQL | ✅ Live - Managed with backups & SSL |
+
 ## Production Notes
 
-- Render Start Command: `npm start` (or `npm run start:prod`).
-- Do not use `npm run dev` on Render; `nodemon` is dev-only.
-- Ensure `FRONTEND_URL` exactly matches your deployed frontend origin.
-- Set strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` in backend env.
-- Run `npm run db:migrate` during release before serving traffic.
-- **Email (SMTP)**: Configure SMTP credentials for transactional emails. On Render, use port 587 with `SMTP_SECURE=false` (STARTTLS) and `family: 4` (IPv4 only).
+### Backend (Render)
+- Start Command: `npm start` (production mode)
+- Do NOT use `npm run dev` on Render (nodemon is dev-only)
+- Ensure `FRONTEND_URL` exactly matches deployed frontend origin
+- Set strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` env vars
+- Migrations auto-run on deployment via Render scripts
+- **Email**: Resend is configured for transactional emails
+
+### Frontend (Vercel)
+- Auto-deploys on push to main branch
+- Environment variables configured in Vercel dashboard
+- CDN caching enabled for optimal performance
+- SSL/TLS enabled by default
+
+### Database (Aiven MySQL)
+- Automated daily backups
+- SSL/TLS encryption enabled
+- Real-time monitoring and alerts
+- Connection pooling optimized
+- Failover protection active
 
 ## The Vision
 

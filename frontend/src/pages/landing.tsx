@@ -35,16 +35,16 @@ type Direction = "up" | "down" | "left" | "right" | "scale";
 
 const directionMap: Record<
   Direction,
-  { opacity: number; x?: number; y?: number; scale?: number }
+  { opacity: number; x?: number; y?: number; scale?: number; filter?: string }
 > = {
-  up: { opacity: 0, y: 40 },
-  down: { opacity: 0, y: -40 },
-  left: { opacity: 0, x: -50 },
-  right: { opacity: 0, x: 50 },
-  scale: { opacity: 0, scale: 0.88 },
+  up: { opacity: 0, y: 40, filter: "blur(6px)" },
+  down: { opacity: 0, y: -40, filter: "blur(6px)" },
+  left: { opacity: 0, x: -50, filter: "blur(8px)" },
+  right: { opacity: 0, x: 50, filter: "blur(8px)" },
+  scale: { opacity: 0, scale: 0.88, filter: "blur(10px)" },
 };
 
-const revealTarget = { opacity: 1, x: 0, y: 0, scale: 1 };
+const revealTarget = { opacity: 1, x: 0, y: 0, scale: 1, filter: "blur(0px)" };
 
 /* ─── Reusable: Section Reveal ─── */
 function Reveal({
@@ -97,15 +97,15 @@ function WordReveal({
       {words.map((word, i) => (
         <motion.span
           key={`${word}-${i}`}
-          initial={{ opacity: 0, y: 24 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
+          initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+          animate={inView ? { opacity: 1, y: 0, filter: "blur(0px)" } : {}}
           transition={{
             duration: 0.6,
             delay: delayStart + i * 0.08,
             ease: [0.16, 1, 0.3, 1],
           }}
           className="inline-block mr-[0.28em]"
-          style={{ willChange: "transform, opacity" }}
+          style={{ willChange: "transform, opacity, filter" }}
         >
           {word}
         </motion.span>
@@ -334,8 +334,8 @@ function HeroSection() {
           <div className="max-w-3xl p-2 md:p-4">
             {/* Subtitle */}
             <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={inView ? { opacity: 0.7, y: 0 } : {}}
+              initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
+              animate={inView ? { opacity: 0.7, y: 0, filter: "blur(0px)" } : {}}
               transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
               className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-white"
             >
@@ -349,8 +349,8 @@ function HeroSection() {
 
             {/* Description with blur-in */}
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={inView ? { opacity: 0.76, y: 0 } : {}}
+              initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+              animate={inView ? { opacity: 0.76, y: 0, filter: "blur(0px)" } : {}}
               transition={{ duration: 0.8, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="mt-5 max-w-2xl text-sm leading-relaxed text-white md:text-base"
             >

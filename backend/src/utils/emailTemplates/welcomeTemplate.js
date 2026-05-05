@@ -23,34 +23,49 @@ const welcomeTemplate = ({ name, email, accountType, dashboardLink }) => {
     <p>Welcome aboard! Your ${isCompany ? 'company' : 'driver'} account has been successfully created on <strong>dispatchCore</strong>.</p>
 
     <div class="highlight-box">
-      <p><strong>Account Type:</strong> ${isCompany ? 'Dispatcher / Company' : 'Driver'}</p>
-      <p><strong>Email:</strong> ${email}</p>
+      <div class="info-row">
+        <div>
+          <p class="info-label">Account Type</p>
+          <p class="info-value">${isCompany ? 'Dispatcher / Company' : 'Driver'}</p>
+        </div>
+      </div>
+      <div class="info-row">
+        <div style="width: 100%;">
+          <p class="info-label">Email Address</p>
+          <p class="info-value">${email}</p>
+        </div>
+      </div>
     </div>
 
-    ${isCompany ? `
-    <p>Here's what you can do next:</p>
-    <ul style="color: #d6d3d1; font-size: 15px; padding-left: 20px;">
-      <li>Create and manage delivery orders</li>
-      <li>Assign orders to your employed drivers</li>
-      <li>List orders on the marketplace for independent drivers to bid on</li>
-      <li>Track all deliveries in real time</li>
+    <div class="section-title">What You Can Do Next</div>
+    <ul>
+      ${isCompany ? `
+        <li>Create and manage delivery orders from your dashboard</li>
+        <li>Assign orders to your employed drivers automatically</li>
+        <li>List orders on the marketplace for independent drivers</li>
+        <li>Track all deliveries in real time with live updates</li>
+        <li>Generate detailed analytics and performance reports</li>
+      ` : `
+        <li>Browse available deliveries on the marketplace</li>
+        <li>Place competitive bids on listed orders</li>
+        <li>Manage your assigned and accepted deliveries</li>
+        <li>Track your earnings and delivery history</li>
+        <li>Build your reputation with successful deliveries</li>
+      `}
     </ul>
-    ` : `
-    <p>Here's what you can do next:</p>
-    <ul style="color: #d6d3d1; font-size: 15px; padding-left: 20px;">
-      <li>Browse available deliveries on the marketplace</li>
-      <li>Place competitive bids on listed orders</li>
-      <li>Manage your assigned deliveries</li>
-      <li>Track your earnings and delivery history</li>
-    </ul>
-    `}
 
-    <div style="text-align: center; margin: 32px 0;">
+    <div class="btn-center">
       <a href="${dashboardLink}" class="btn">Go to Dashboard</a>
     </div>
 
-    <p>If you have any questions, feel free to reach out to our support team.</p>
-    <p style="color: #78716c; font-size: 13px;">Happy delivering — The dispatchCore Team</p>
+    <div class="divider"></div>
+    
+    <p style="font-size: 14px; margin-bottom: 12px;">Need help getting started?</p>
+    <p style="font-size: 13px; color: #78716c; margin: 0;">
+      Check out our <a href="https://dispatchcore.tech/docs" style="color: #fb923c;">documentation</a> or 
+      reach out to our <a href="https://dispatchcore.tech/contact" style="color: #fb923c;">support team</a> anytime.
+    </p>
+    <p style="color: #78716c; font-size: 13px; margin-top: 16px;">Happy delivering — The dispatchCore Team</p>
   `;
 
   return { subject, html: baseLayout(`Welcome, ${name}`, body) };

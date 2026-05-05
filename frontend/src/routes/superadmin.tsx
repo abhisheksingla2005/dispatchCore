@@ -1,15 +1,25 @@
+import { lazy, Suspense } from "react";
 import { PageTransition } from "@/components/layout/page-transition";
-import SuperAdminDashboardPage from "@/pages/superadmin/dashboard";
-import SuperAdminCompaniesPage from "@/pages/superadmin/companies";
-import SuperAdminDriversPage from "@/pages/superadmin/drivers";
-import SuperAdminAnalyticsPage from "@/pages/superadmin/analytics";
-import SuperAdminSettingsPage from "@/pages/superadmin/settings";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import type { AppRouteDefinition } from "./types";
 
+// Lazy-load all superadmin pages
+const SuperAdminDashboardPage = lazy(() => import("@/pages/superadmin/dashboard"));
+const SuperAdminCompaniesPage = lazy(() => import("@/pages/superadmin/companies"));
+const SuperAdminDriversPage = lazy(() => import("@/pages/superadmin/drivers"));
+const SuperAdminAnalyticsPage = lazy(() => import("@/pages/superadmin/analytics"));
+const SuperAdminSettingsPage = lazy(() => import("@/pages/superadmin/settings"));
+
+const LazyPage = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<LoadingScreen />}>
+    {children}
+  </Suspense>
+);
+
 export const superadminRoutes: AppRouteDefinition[] = [
-  { path: "/superadmin", element: <PageTransition><SuperAdminDashboardPage /></PageTransition> },
-  { path: "/superadmin/companies", element: <PageTransition><SuperAdminCompaniesPage /></PageTransition> },
-  { path: "/superadmin/drivers", element: <PageTransition><SuperAdminDriversPage /></PageTransition> },
-  { path: "/superadmin/analytics", element: <PageTransition><SuperAdminAnalyticsPage /></PageTransition> },
-  { path: "/superadmin/settings", element: <PageTransition><SuperAdminSettingsPage /></PageTransition> },
+  { path: "/superadmin", element: <PageTransition><LazyPage><SuperAdminDashboardPage /></LazyPage></PageTransition> },
+  { path: "/superadmin/companies", element: <PageTransition><LazyPage><SuperAdminCompaniesPage /></LazyPage></PageTransition> },
+  { path: "/superadmin/drivers", element: <PageTransition><LazyPage><SuperAdminDriversPage /></LazyPage></PageTransition> },
+  { path: "/superadmin/analytics", element: <PageTransition><LazyPage><SuperAdminAnalyticsPage /></LazyPage></PageTransition> },
+  { path: "/superadmin/settings", element: <PageTransition><LazyPage><SuperAdminSettingsPage /></LazyPage></PageTransition> },
 ];

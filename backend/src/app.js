@@ -16,6 +16,7 @@ const errorHandler = require('./middlewares/errorHandler');
 const requestIdentity = require('./middlewares/requestIdentity');
 const { authMiddleware } = require('./middlewares/authMiddleware');
 const maintenanceMode = require('./middlewares/maintenanceMode');
+const { paginationMiddleware, cacheHeaderMiddleware, etagMiddleware, queryTimeoutMiddleware } = require('./middlewares/queryOptimization');
 const routes = require('./routes');
 const logger = require('./config/logger');
 
@@ -58,6 +59,12 @@ app.use(cookieParser());
 
 // ── CORS ──
 app.use(corsMiddleware);
+
+// ── Query Optimization ──
+app.use(paginationMiddleware);      // Add pagination parsing
+app.use(queryTimeoutMiddleware(30000)); // 30-second timeout for all requests
+app.use(cacheHeaderMiddleware);      // Add cache headers based on route
+app.use(etagMiddleware);             // Add ETag support for cache validation
 
 const PUBLIC_API_RULES = [
     { method: 'GET', pattern: /^\/api\/health\/?$/ },

@@ -106,7 +106,7 @@ class AssignmentService {
           attributes: ['id'],
           transaction,
         });
-        if (driverVehicle) resolvedVehicleId = driverVehicle.id;
+        if (driverVehicle) {resolvedVehicleId = driverVehicle.id;}
       }
 
       // Create assignment record

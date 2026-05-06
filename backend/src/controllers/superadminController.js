@@ -177,7 +177,7 @@ const getAllOrders = async (req, res, next) => {
   try {
     const { status, limit = 50, page = 1 } = req.query;
     const where = {};
-    if (status) where.status = status;
+    if (status) {where.status = status;}
 
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const { count: total, rows: orders } = await Order.findAndCountAll({

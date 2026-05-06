@@ -206,16 +206,16 @@ class RouteMatchingService {
       const deliveryMatch = deliveryNearStart || deliveryNearEnd || deliveryOnRoute;
 
       // Must match at least one of pickup or delivery
-      if (!pickupMatch && !deliveryMatch) continue;
-      if (seenDriverIds.has(route.driver_id)) continue;
+      if (!pickupMatch && !deliveryMatch) {continue;}
+      if (seenDriverIds.has(route.driver_id)) {continue;}
       seenDriverIds.add(route.driver_id);
       attachLegacyUserShape(route.driver);
 
       // Determine overall match quality
       let matchType = 'enroute';
-      if (pickupMatch && deliveryMatch) matchType = 'full';
-      else if (pickupMatch) matchType = 'pickup';
-      else if (deliveryMatch) matchType = 'delivery';
+      if (pickupMatch && deliveryMatch) {matchType = 'full';}
+      else if (pickupMatch) {matchType = 'pickup';}
+      else if (deliveryMatch) {matchType = 'delivery';}
 
       matchingDrivers.push({
         driver: route.driver,

@@ -19,8 +19,8 @@ const getDrivers = async (req, res, next) => {
     const { status, type } = req.query;
     const where = { company_id: req.tenantId };
 
-    if (status) where.status = status;
-    if (type) where.type = type;
+    if (status) {where.status = status;}
+    if (type) {where.type = type;}
 
     const drivers = await Driver.findAll({
       where,

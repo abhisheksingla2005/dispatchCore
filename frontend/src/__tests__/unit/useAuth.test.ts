@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useState } from 'react';
 
 // Mock useAuth hook (replace with actual import)
@@ -20,15 +20,15 @@ const useAuth = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string) => {
     setLoading(true);
     try {
       // Mock API call - simulated delay
       await new Promise(resolve => setTimeout(resolve, 10));
       setUser({ id: '1', email });
       localStorage.setItem('authToken', 'test_token');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ describe('useAuth Hook', () => {
   });
 
   it('should clear user on logout', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
+    (global as unknown as typeof globalThis).fetch = vi.fn().mockResolvedValueOnce({
       json: async () => ({
         user: { id: '1', email: 'user@example.com' },
         token: 'auth_token_123'

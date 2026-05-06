@@ -27,7 +27,7 @@ const normalizeStructuredLog = winston.format((info) => {
     });
 
     const mergeMeta = (value) => {
-        if (!value) return;
+        if (!value) {return;}
 
         if (value instanceof Error) {
             normalizedMeta.err = serializeError(value);

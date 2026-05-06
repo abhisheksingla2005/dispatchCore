@@ -22,7 +22,7 @@ const mockFirebaseAuth = () => {
     }),
     getUserByEmail: jest.fn(async (email) => {
       for (const [uid, user] of users) {
-        if (user.email === email) return user;
+        if (user.email === email) {return user;}
       }
       throw new Error('User not found');
     }),
@@ -54,7 +54,7 @@ const mockSequelizeModel = (name, initialData = []) => {
       const where = options?.where || {};
       return data.find(item => {
         for (const key in where) {
-          if (item[key] !== where[key]) return false;
+          if (item[key] !== where[key]) {return false;}
         }
         return true;
       }) || null;
@@ -64,7 +64,7 @@ const mockSequelizeModel = (name, initialData = []) => {
       if (options?.where) {
         results = results.filter(item => {
           for (const key in options.where) {
-            if (item[key] !== options.where[key]) return false;
+            if (item[key] !== options.where[key]) {return false;}
           }
           return true;
         });
@@ -94,7 +94,7 @@ const mockSequelizeModel = (name, initialData = []) => {
       });
       return [updated, data.filter(item => {
         for (const key in where) {
-          if (item[key] !== where[key]) return false;
+          if (item[key] !== where[key]) {return false;}
         }
         return true;
       })];
@@ -110,7 +110,7 @@ const mockSequelizeModel = (name, initialData = []) => {
             break;
           }
         }
-        if (matches) data.splice(i, 1);
+        if (matches) {data.splice(i, 1);}
       }
       return initialLength - data.length;
     }),
@@ -122,7 +122,7 @@ const mockSequelizeModel = (name, initialData = []) => {
       if (options?.where) {
         count = data.filter(item => {
           for (const key in options.where) {
-            if (item[key] !== options.where[key]) return false;
+            if (item[key] !== options.where[key]) {return false;}
           }
           return true;
         }).length;

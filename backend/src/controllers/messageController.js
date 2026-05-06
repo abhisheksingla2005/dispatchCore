@@ -38,8 +38,8 @@ function otherRole(channel, myRole) {
 }
 
 function getStatusesForBucket(bucket) {
-  if (bucket === 'active') return ACTIVE_ORDER_STATUSES;
-  if (bucket === 'archived') return ARCHIVED_ORDER_STATUSES;
+  if (bucket === 'active') {return ACTIVE_ORDER_STATUSES;}
+  if (bucket === 'archived') {return ARCHIVED_ORDER_STATUSES;}
   throw new ValidationError('bucket must be active or archived');
 }
 
@@ -125,7 +125,7 @@ const getConversations = async (req, res, next) => {
 
     if (role === 'dispatcher') {
       const companyId = req.identity?.companyId ?? null;
-      if (!companyId) throw new ForbiddenError('Company context is required');
+      if (!companyId) {throw new ForbiddenError('Company context is required');}
       orders = await Order.findAll({
         where: { company_id: companyId },
         include: eagerIncludes,
@@ -133,7 +133,7 @@ const getConversations = async (req, res, next) => {
       });
     } else if (role === 'driver') {
       const driverId = req.identity?.driverId ?? null;
-      if (!driverId) throw new ForbiddenError('Driver context is required');
+      if (!driverId) {throw new ForbiddenError('Driver context is required');}
       const assignments = await Assignment.findAll({
         where: { driver_id: driverId },
         include: [
@@ -154,7 +154,7 @@ const getConversations = async (req, res, next) => {
 
     // Batch-fetch message stats for all order IDs
     const orderIds = orders.map((o) => o.id);
-    if (orderIds.length === 0) return success(res, []);
+    if (orderIds.length === 0) {return success(res, []);}
 
     // Get message counts + last message per order+channel in bulk
     const messageCounts = await Message.findAll({
@@ -188,7 +188,7 @@ const getConversations = async (req, res, next) => {
     const lastMessageMap = new Map();
     for (const m of allMessages) {
       const key = countKey(m.order_id, m.channel);
-      if (!lastMessageMap.has(key)) lastMessageMap.set(key, m);
+      if (!lastMessageMap.has(key)) {lastMessageMap.set(key, m);}
     }
 
     const conversations = [];
@@ -201,21 +201,21 @@ const getConversations = async (req, res, next) => {
       // Determine which channels this role participates in
       const myChannels = [];
       if (role === 'dispatcher') {
-        if (participants.driver) myChannels.push('dispatcher-driver');
-        if (participants.recipient) myChannels.push('dispatcher-recipient');
+        if (participants.driver) {myChannels.push('dispatcher-driver');}
+        if (participants.recipient) {myChannels.push('dispatcher-recipient');}
       } else if (role === 'driver') {
-        if (participants.dispatcher) myChannels.push('dispatcher-driver');
-        if (participants.recipient) myChannels.push('driver-recipient');
+        if (participants.dispatcher) {myChannels.push('dispatcher-driver');}
+        if (participants.recipient) {myChannels.push('driver-recipient');}
       } else {
         // recipient
-        if (participants.dispatcher) myChannels.push('dispatcher-recipient');
-        if (participants.driver) myChannels.push('driver-recipient');
+        if (participants.dispatcher) {myChannels.push('dispatcher-recipient');}
+        if (participants.driver) {myChannels.push('driver-recipient');}
       }
 
       for (const channel of myChannels) {
         const key = countKey(order.id, channel);
         const messageCount = totalMap.get(key) || 0;
-        if (messageCount === 0) continue;
+        if (messageCount === 0) {continue;}
 
         const other = otherRole(channel, role);
         const otherParticipant = participants[other];
@@ -282,7 +282,7 @@ const getMessages = async (req, res, next) => {
     }
 
     const order = await Order.findByPk(orderId);
-    if (!order) throw new NotFoundError('Order');
+    if (!order) {throw new NotFoundError('Order');}
 
     // Authorization
     if (role === 'dispatcher') {
@@ -295,7 +295,7 @@ const getMessages = async (req, res, next) => {
       const assignment = await Assignment.findOne({
         where: { order_id: orderId, driver_id: driverId },
       });
-      if (!assignment) throw new ForbiddenError('Not assigned to this order');
+      if (!assignment) {throw new ForbiddenError('Not assigned to this order');}
     }
 
     const messages = await Message.findAll({
@@ -356,7 +356,7 @@ const sendMessage = async (req, res, next) => {
     }
 
     const order = await Order.findByPk(orderId);
-    if (!order) throw new NotFoundError('Order');
+    if (!order) {throw new NotFoundError('Order');}
     if (isArchivedOrder(order.status)) {
       throw new ValidationError('Chat is closed for completed orders');
     }
@@ -370,7 +370,7 @@ const sendMessage = async (req, res, next) => {
       const assignment = await Assignment.findOne({
         where: { order_id: orderId, driver_id: sender_id },
       });
-      if (!assignment) throw new ForbiddenError('Driver not assigned to this order');
+      if (!assignment) {throw new ForbiddenError('Driver not assigned to this order');}
     }
 
     const message = await Message.create({
@@ -429,7 +429,7 @@ const markAsRead = async (req, res, next) => {
       throw new ForbiddenError('You are not a participant in this channel');
     }
 
-    if (!role) throw new ValidationError('role is required');
+    if (!role) {throw new ValidationError('role is required');}
 
     const [count] = await Message.update(
       { is_read: true },

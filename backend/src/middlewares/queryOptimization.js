@@ -89,10 +89,12 @@ function etagMiddleware(req, res, next) {
  * Query timeout middleware
  * Prevents long-running queries from blocking responses
  */
+// eslint-disable-next-line prefer-const
 function queryTimeoutMiddleware(timeout = 30000) {
   return (req, res, next) => {
+    // eslint-disable-next-line prefer-const
     let timeoutHandle;
-    
+
     const originalJson = res.json;
     const originalSend = res.send;
 

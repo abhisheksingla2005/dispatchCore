@@ -60,7 +60,7 @@ function registerShutdownHandlers({ server, sequelize, logger }) {
     try {
       await new Promise((resolve, reject) => {
         server.close((error) => {
-          if (error) return reject(error);
+          if (error) {return reject(error);}
           resolve();
         });
       });

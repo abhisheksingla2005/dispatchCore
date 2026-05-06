@@ -1,6 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { PageTransition } from "@/components/layout/page-transition";
-import { LoadingScreen } from "@/components/ui/loading-screen";
+import { LazyPage } from "@/components/layout/lazy-page";
 import type { AppRouteDefinition } from "./types";
 
 // Lazy-load all dispatcher pages to reduce initial bundle
@@ -14,12 +14,6 @@ const DriversPage = lazy(() => import("@/pages/dispatcher/drivers"));
 const DispatcherAnalyticsPage = lazy(() => import("@/pages/dispatcher/analytics"));
 const DispatcherMarketplace = lazy(() => import("@/pages/dispatcher/marketplace"));
 const DispatcherDriverRoutesPage = lazy(() => import("@/pages/dispatcher/driver-routes"));
-
-const LazyPage = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<LoadingScreen />}>
-    {children}
-  </Suspense>
-);
 
 export const dispatcherRoutes: AppRouteDefinition[] = [
   { path: "/dashboard", element: <PageTransition><LazyPage><DashboardPage /></LazyPage></PageTransition> },

@@ -1,6 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { PageTransition } from "@/components/layout/page-transition";
-import { LoadingScreen } from "@/components/ui/loading-screen";
+import { LazyPage } from "@/components/layout/lazy-page";
 import type { AppRouteDefinition } from "./types";
 
 // Public pages: landing and auth can load immediately, others lazy-load
@@ -22,11 +22,6 @@ const FAQPage = lazy(() => import("@/pages/extra/faq"));
 const SitemapPage = lazy(() => import("@/pages/extra/sitemap"));
 const CustomerTrackingPage = lazy(() => import("@/pages/tracking/tracking"));
 
-const LazyPage = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<LoadingScreen />}>
-    {children}
-  </Suspense>
-);
 
 export const publicRoutes: AppRouteDefinition[] = [
   { path: "/", element: <PageTransition><LandingPage /></PageTransition> },

@@ -9,7 +9,7 @@
  */
 
 import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
+import { expect, afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 // Cleanup after each test
@@ -33,7 +33,7 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
+(global as unknown as Window).IntersectionObserver = class IntersectionObserver {
   constructor() {}
   disconnect() {}
   observe() {}
@@ -41,15 +41,15 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
   unobserve() {}
-} as any;
+} as unknown as typeof IntersectionObserver;
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+(global as unknown as Window).ResizeObserver = class ResizeObserver {
   constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}
-} as any;
+} as unknown as typeof ResizeObserver;
 
 // Suppress console errors in tests
 const originalError = console.error;
@@ -63,8 +63,8 @@ afterEach(() => {
 
 // Custom matchers
 expect.extend({
-  toHaveBeenCalledWithArgs(received: any, ...args: any[]) {
-    const pass = received.mock.calls.some((call: any[]) =>
+  toHaveBeenCalledWithArgs(received: { mock: { calls: unknown[][] } }, ...args: unknown[]) {
+    const pass = received.mock.calls.some((call: unknown[]) =>
       args.every((arg, i) => arg === call[i])
     );
     return {

@@ -94,7 +94,7 @@ app.get('/', async (req, res) => {
                 await sequelize.authenticate();
                 databaseConnected = true;
         } catch {
-                databaseConnected = false;
+                // stays false
         }
 
         const dbLabel = databaseConnected ? 'Connected' : 'Disconnected';

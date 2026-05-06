@@ -12,6 +12,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
 
 // Mock Button component (replace with actual import)
 const Button = ({ 
@@ -20,7 +21,13 @@ const Button = ({
   disabled, 
   variant = 'primary',
   ...props 
-}: any) => (
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  variant?: string;
+  [key: string]: unknown;
+}) => (
   <button 
     onClick={onClick} 
     disabled={disabled}

@@ -282,7 +282,7 @@ export default function DashboardPage() {
         highlighted: true,
       },
     ];
-  }, [selectedShipment, selectedRouteCoordinates, driverLocations]);
+  }, [selectedShipment, selectedRouteCoordinates]);
 
   useEffect(() => {
     if (

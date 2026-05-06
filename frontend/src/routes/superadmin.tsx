@@ -1,6 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { PageTransition } from "@/components/layout/page-transition";
-import { LoadingScreen } from "@/components/ui/loading-screen";
+import { LazyPage } from "@/components/layout/lazy-page";
 import type { AppRouteDefinition } from "./types";
 
 // Lazy-load all superadmin pages
@@ -10,11 +10,6 @@ const SuperAdminDriversPage = lazy(() => import("@/pages/superadmin/drivers"));
 const SuperAdminAnalyticsPage = lazy(() => import("@/pages/superadmin/analytics"));
 const SuperAdminSettingsPage = lazy(() => import("@/pages/superadmin/settings"));
 
-const LazyPage = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<LoadingScreen />}>
-    {children}
-  </Suspense>
-);
 
 export const superadminRoutes: AppRouteDefinition[] = [
   { path: "/superadmin", element: <PageTransition><LazyPage><SuperAdminDashboardPage /></LazyPage></PageTransition> },

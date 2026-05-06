@@ -49,7 +49,7 @@ const getMyRoutes = async (req, res, next) => {
   try {
     const routeMatchingService = req.app.get('routeMatchingService');
     const driverId = req.identity?.driverId ?? null;
-    if (!driverId) return success(res, []);
+    if (!driverId) {return success(res, []);}
     const routes = await routeMatchingService.getDriverRoutes(driverId);
     return success(res, routes);
   } catch (error) {

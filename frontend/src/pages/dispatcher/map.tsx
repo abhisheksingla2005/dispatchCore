@@ -216,6 +216,7 @@ export default function MapOverviewPage() {
       !focusedOrder?.delivery_lat ||
       !focusedOrder?.delivery_lng
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedRouteCoordinates(null);
       setRouteLoading(false);
       return;
@@ -292,7 +293,7 @@ export default function MapOverviewPage() {
       return orderRoutes.filter((route) => route.id === `route-${focusedOrder.id}`);
     }
     return orderRoutes;
-  }, [layer, orderRoutes, focusedOrder]);
+  }, [layer, orderRoutes, focusedOrder, selectedRouteCoordinates]);
 
   // Compute bounds from all order + driver coordinates to auto-fit the map
   const mapBounds = useMemo(():
